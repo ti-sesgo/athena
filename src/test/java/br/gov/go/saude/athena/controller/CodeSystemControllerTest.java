@@ -1,15 +1,15 @@
 package br.gov.go.saude.athena.controller;
 
 import br.gov.go.saude.athena.domain.CodeSystemEntity;
-import br.gov.go.saude.athena.repository.CodeSystemRepository;
 import br.gov.go.saude.athena.repository.ConceptDisplayProjection;
-import br.gov.go.saude.athena.repository.ConceptRepository;
+import br.gov.go.saude.athena.service.CodeSystemService;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.StringType;
 import org.springframework.http.ResponseEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,10 +28,7 @@ import static org.mockito.Mockito.when;
 class CodeSystemControllerTest {
 
     @Mock
-    private CodeSystemRepository codeSystemRepository;
-
-    @Mock
-    private ConceptRepository conceptRepository;
+    private CodeSystemService codeSystemService;
 
     private CodeSystemController controller;
     private FhirContext fhirContext;
@@ -41,7 +38,7 @@ class CodeSystemControllerTest {
     void setUp() {
         fhirContext = FhirContext.forR4();
         jsonParser = fhirContext.newJsonParser();
-        controller = new CodeSystemController(codeSystemRepository, conceptRepository, fhirContext);
+        controller = new CodeSystemController(codeSystemService, fhirContext);
     }
 
     @Test
@@ -52,7 +49,7 @@ class CodeSystemControllerTest {
         CodeSystemEntity entity = new CodeSystemEntity();
         entity.setContent(jsonContent.getBytes());
 
-        when(codeSystemRepository.findByResourceIdAndIsLatestTrue(id)).thenReturn(Optional.of(entity));
+        when(codeSystemService.findById(id)).thenReturn(Optional.of(entity));
 
         // Act
         String result = controller.getCodeSystemById(id);
@@ -68,8 +65,7 @@ class CodeSystemControllerTest {
     void shouldReturnNotFoundWhenCodeSystemIdDoesNotExist() {
         // Arrange
         String id = "non-existent";
-        when(codeSystemRepository.findByResourceIdAndIsLatestTrue(id)).thenReturn(Optional.empty());
-        when(codeSystemRepository.findById(-1L)).thenReturn(Optional.empty());
+        when(codeSystemService.findById(id)).thenReturn(Optional.empty());
 
         // Act & Assert
         ResponseStatusException exception = assertThrows(ResponseStatusException.class,
@@ -85,7 +81,7 @@ class CodeSystemControllerTest {
         CodeSystemEntity entity = new CodeSystemEntity();
         entity.setContent(jsonContent.getBytes());
 
-        when(codeSystemRepository.findByUrlAndIsLatestTrue(url)).thenReturn(Optional.of(entity));
+        when(codeSystemService.findByUrl(url)).thenReturn(Optional.of(entity));
 
         // Act
         String result = controller.getCodeSystemByUrl(url);
@@ -117,11 +113,11 @@ class CodeSystemControllerTest {
         when(projection.getCodeSystemVersion()).thenReturn(csVersion);
         when(projection.getDefinition()).thenReturn(definition);
 
-        when(conceptRepository.findDisplayBySystemAndCodeAndActiveTrue(system, code))
+        when(codeSystemService.findConcept(system, code))
                 .thenReturn(Optional.of(projection));
 
         // Act
-        ResponseEntity<String> response = controller.lookup(system, code);
+        ResponseEntity<String> response = controller.lookup(system, code, null);
 
         // Assert
         assertEquals(200, response.getStatusCode().value());
@@ -132,19 +128,55 @@ class CodeSystemControllerTest {
 
         assertTrue(parameters.hasParameter("display"));
         assertEquals(display,
-                ((org.hl7.fhir.r4.model.StringType) parameters.getParameter("display").getValue()).getValue());
+                ((StringType) parameters.getParameter("display").getValue()).getValue());
 
         assertTrue(parameters.hasParameter("name"));
         assertEquals(csName,
-                ((org.hl7.fhir.r4.model.StringType) parameters.getParameter("name").getValue()).getValue());
+                ((StringType) parameters.getParameter("name").getValue()).getValue());
 
         assertTrue(parameters.hasParameter("version"));
         assertEquals(csVersion,
-                ((org.hl7.fhir.r4.model.StringType) parameters.getParameter("version").getValue()).getValue());
+                ((StringType) parameters.getParameter("version").getValue()).getValue());
 
         assertTrue(parameters.hasParameter("definition"));
         assertEquals(definition,
-                ((org.hl7.fhir.r4.model.StringType) parameters.getParameter("definition").getValue()).getValue());
+                ((StringType) parameters.getParameter("definition").getValue()).getValue());
+    }
+
+    @Test
+    void shouldPerformLookupWithVersion() {
+        // Arrange
+        String system = "http://test.com/cs";
+        String code = "TEST-CODE";
+        String version = "1.0.0";
+        String display = "Test Display Name";
+        String csName = "Test Code System";
+        String csVersion = "1.0.0";
+
+        ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
+        when(projection.getDisplay()).thenReturn(display);
+        when(projection.getCodeSystemName()).thenReturn(csName);
+        when(projection.getCodeSystemVersion()).thenReturn(csVersion);
+
+        when(codeSystemService.findConcept(system, code, version))
+                .thenReturn(Optional.of(projection));
+
+        // Act
+        ResponseEntity<String> response = controller.lookup(system, code, version);
+
+        // Assert
+        assertEquals(200, response.getStatusCode().value());
+
+        String result = response.getBody();
+        assertNotNull(result);
+        Parameters parameters = jsonParser.parseResource(Parameters.class, result);
+
+        assertTrue(parameters.hasParameter("display"));
+        assertEquals(display,
+                ((StringType) parameters.getParameter("display").getValue()).getValue());
+        assertTrue(parameters.hasParameter("version"));
+        assertEquals(version,
+                ((StringType) parameters.getParameter("version").getValue()).getValue());
     }
 
     @Test
@@ -153,11 +185,11 @@ class CodeSystemControllerTest {
         String system = "http://test.com/cs";
         String code = "UNKNOWN";
 
-        when(conceptRepository.findDisplayBySystemAndCodeAndActiveTrue(system, code))
+        when(codeSystemService.findConcept(system, code))
                 .thenReturn(Optional.empty());
 
         // Act
-        ResponseEntity<String> response = controller.lookup(system, code);
+        ResponseEntity<String> response = controller.lookup(system, code, null);
 
         // Assert
         assertEquals(404, response.getStatusCode().value());
@@ -180,7 +212,7 @@ class CodeSystemControllerTest {
         String code = null;
 
         // Act
-        ResponseEntity<String> response = controller.lookup(system, code);
+        ResponseEntity<String> response = controller.lookup(system, code, null);
 
         // Assert
         assertEquals(400, response.getStatusCode().value());
