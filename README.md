@@ -12,7 +12,7 @@ O servidor de terminologias FHIR mais rápido e simples do mundo!
 |--------------------------|-------------------------------------|---------------------------------------------------------------------------------------|------------------|--------------------|
 | **Expand**               | `GET /ValueSet/{id}/$expand`        | Expande um ValueSet retornando a lista de códigos que atendem aos critérios de filtro | ✅ SHALL          | ❌ Não implementado |
 | **Expand**               | `POST /ValueSet/$expand`            | Expande um ValueSet fornecido no corpo da requisição                                  | ✅ SHALL          | ❌ Não implementado |
-| **Lookup**               | `GET /CodeSystem/$lookup`           | Retorna informações sobre um código específico (display, propriedades, designações)   | ✅ SHALL          | ❌ Não implementado |
+| **Lookup**               | `GET /CodeSystem/$lookup`           | Retorna informações sobre um código específico (display, propriedades, designações)   | ✅ SHALL          | ✅ Implementado     |
 | **Lookup**               | `POST /CodeSystem/$lookup`          | Retorna informações sobre um código usando Coding no corpo da requisição              | ✅ SHALL          | ❌ Não implementado |
 | **Validate Code**        | `GET /ValueSet/{id}/$validate-code` | Valida se um código pertence a um ValueSet específico                                 | ✅ SHALL          | ❌ Não implementado |
 | **Validate Code**        | `POST /ValueSet/$validate-code`     | Valida um CodeableConcept contra um ValueSet                                          | ✅ SHALL          | ❌ Não implementado |
@@ -36,8 +36,8 @@ O servidor de terminologias FHIR mais rápido e simples do mundo!
 | **Capability Statement** | `GET /metadata`                     | Retorna as capacidades do servidor de terminologia                                    | ✅ SHALL          | ❌ Não implementado |
 | **Subsumes**             | `GET /CodeSystem/$subsumes`         | Testa se o conceito A subsume o conceito B                                            | MAY              | ❌ Não implementado |
 | **Subsumes**             | `POST /CodeSystem/$subsumes`        | Testa relação de subsunção usando Codings                                             | MAY              | ❌ Não implementado |
-| **Read CodeSystem**      | `GET /CodeSystem/{id}`              | Recupera um CodeSystem específico por ID                                              | MAY              | ❌ Não implementado |
-| **Search CodeSystem**    | `GET /CodeSystem?url={url}`         | Busca CodeSystem por URL canônica                                                     | MAY              | ❌ Não implementado |
+| **Read CodeSystem**      | `GET /CodeSystem/{id}`              | Recupera um CodeSystem específico por ID                                              | MAY              | ✅ Implementado     |
+| **Search CodeSystem**    | `GET /CodeSystem?url={url}`         | Busca CodeSystem por URL canônica                                                     | MAY              | ✅ Implementado     |
 | **Search CodeSystem**    | `GET /CodeSystem?name={name}`       | Busca CodeSystem por nome                                                             | MAY              | ❌ Não implementado |
 | **Batch Operations**     | `POST /`                            | Executa múltiplas operações de validação ou tradução em lote                          | MAY              | ❌ Não implementado |
 
