@@ -139,8 +139,7 @@ public class CodeSystemLoaderService {
         if (codeSystem.hasConcept()) {
             loadConcepts(codeSystem, csEntity);
             conceptsLoaded = codeSystem.getConcept().size();
-            // TODO
-            // Note: loadConcepts is recursive, size() only gives top level.
+            // TODO: Note: loadConcepts is recursive, size() only gives top level
             // Better count would be deep,
             // Let's stick to getConcept().size() as a rough indicator or improve later.
         }

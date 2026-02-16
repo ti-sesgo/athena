@@ -3,15 +3,19 @@ package br.gov.go.saude.athena.config;
 import br.gov.go.saude.athena.service.PackageLoaderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import java.util.List;
 
 /**
  * Configuração para carregamento automático de packages na inicialização.
  * 
- * <p>Configuração via application.properties:
+ * <p>
+ * Configuração via application.properties:
+ * 
  * <pre>
  * # Carregamento local
  * athena.packages=/path/to/package1.tgz,/path/to/package2.tgz
@@ -25,33 +29,30 @@ import org.springframework.context.event.EventListener;
  */
 @Slf4j
 @Configuration
+@EnableConfigurationProperties(AthenaProperties.class)
 @RequiredArgsConstructor
 public class PackageLoaderConfig {
 
     private final PackageLoaderService packageLoaderService;
-
-    @Value("${athena.packages:}")
-    private String packagesConfig;
-
-    @Value("${athena.packages.auto-load:true}")
-    private boolean autoLoad;
+    private final AthenaProperties athenaProperties;
 
     /**
      * Carrega packages automaticamente após a aplicação estar pronta.
      */
     @EventListener(ApplicationReadyEvent.class)
     public void loadPackagesOnStartup() {
-        if (!autoLoad) {
+        if (!athenaProperties.isAutoLoad()) {
             log.info("Carregamento automático de packages desabilitado");
             return;
         }
 
-        if (packagesConfig == null || packagesConfig.trim().isEmpty()) {
-            log.warn("Nenhum package configurado para carregamento (athena.packages)");
+        List<String> items = athenaProperties.getItems();
+        if (items == null || items.isEmpty()) {
+            log.warn("Nenhum package configurado para carregamento (athena.packages.items)");
             return;
         }
 
-        String[] packages = packagesConfig.split(",");
+        String[] packages = items.toArray(new String[0]);
         log.info("Packages configurados: {}", packages.length);
 
         try {

@@ -1,0 +1,50 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: athena
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/terminologia}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:senha-segura}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 100
+        order_inserts: true
+        order_updates: true
+        show_sql: false
+
+  flyway:
+    enabled: true
+    schemas: terminology
+    baseline-on-migrate: true
+
+athena:
+  packages:
+    auto-load: true
+    items:
+      - br.go.ses.reds-go:1.0.0
+      - br.go.ses.core:1.1.0
+      - br.go.ses.seguranca:0.1.2
+      - br.go.ses.medicamentos:1.0.0
+      - br.go.ses.exame:1.0.0
+      - hl7.terminology.r4:6.5.0
+      - hl7.fhir.uv.extensions.r4:5.2.0
+      - hl7.fhir.uv.tools.r4:0.7.1
+      - hl7.fhir.r4.core:4.0.1
+
+logging:
+  level:
+    br.gov.go.saude.athena: INFO
+    org.hibernate.SQL: INFO

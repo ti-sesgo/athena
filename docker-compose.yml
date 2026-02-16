@@ -11,5 +11,21 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  athena-app:
+    build: .
+    container_name: athena-app
+    ports:
+      - "8085:8085"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://athena-db:5432/terminologia
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=senha-segura
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - ATHENA_PACKAGES_ITEMS=br.go.ses.reds-go:1.0.0,br.go.ses.core:1.1.0,br.go.ses.seguranca:0.1.2,br.go.ses.medicamentos:1.0.0,br.go.ses.exame:1.0.0,hl7.terminology.r4:6.5.0,hl7.fhir.uv.extensions.r4:5.2.0,hl7.fhir.uv.tools.r4:0.7.1,hl7.fhir.r4.core:4.0.1
+    depends_on:
+      - athena-db
+    volumes:
+      - ./packages:/data/packages
+
 volumes:
   postgres_data:
