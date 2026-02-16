@@ -20,17 +20,14 @@ graph LR
 
 ```mermaid
 graph TB
-    Cliente[Cliente]
-    Registry[FHIR Registry]
+    Cliente["Cliente"];
+    Registry["FHIR Registry"];
+    API["API REST (Spring Boot)"];
+    DB["PostgreSQL"];
     
-    subgraph Athena[Athena Terminology Server]
-        API[API REST<br/>Spring Boot]
-        DB[(PostgreSQL)]
-        API -->|Consulta/Persiste| DB
-    end
-    
-    Cliente -->|HTTPS/JSON<br/>expand, lookup,<br/>validate-code, translate| API
-    API -->|Carrega packages| Registry
+    API -->|"Consulta/Persiste"| DB;
+    Cliente -->|"HTTPS / JSON ($lookup...)"| API;
+    API -->|"Carrega packages"| Registry;
         
     style Cliente fill:#999,stroke:#666,color:#fff
     style API fill:#4A90E2,stroke:#2E5C8A,color:#fff
