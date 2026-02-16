@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Parameters;
+import org.hl7.fhir.r4.model.StringType;
 import org.springframework.http.HttpStatus;
 
 import org.springframework.web.bind.annotation.*;
@@ -115,7 +116,7 @@ public class CodeSystemController {
 
         // Monta o retorno Parameters conforme spec FHIR
         Parameters parameters = new Parameters();
-        parameters.addParameter("display", new org.hl7.fhir.r4.model.StringType(projection.get().getDisplay()));
+        parameters.addParameter("display", new StringType(projection.get().getDisplay()));
 
         // Padrão do projeto: retornar JSON simples e legível
         IParser parser = fhirContext.newJsonParser();

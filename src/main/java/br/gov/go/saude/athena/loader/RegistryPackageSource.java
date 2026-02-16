@@ -58,7 +58,10 @@ public class RegistryPackageSource implements PackageSource {
                 throw new IOException("Erro ao baixar package: HTTP " + response.statusCode());
             }
 
-            byte[] packageBytes = response.body().readAllBytes();
+            byte[] packageBytes;
+            try (InputStream is = response.body()) {
+                packageBytes = is.readAllBytes();
+            }
 
             // TODO: talvez desnecessário
             // Valida metadados usando PackageJsonReader
@@ -73,7 +76,6 @@ public class RegistryPackageSource implements PackageSource {
     @Override
     public byte[] load() throws Exception {
         try {
-            log.info("Carregando package do registry: {}:{}", packageId, version);
             return loadingFuture.get();
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();

@@ -1,0 +1,15 @@
+services:
+  athena-db:
+    image: postgres:16
+    container_name: athena-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=senha-segura
+      - POSTGRES_DB=terminologia
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Representa um conceito (código) de um CodeSystem.
@@ -26,13 +28,13 @@ public class ConceptEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false)
     private String system;
 
     @Column
     private String version;
 
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false)
     private String code;
 
     @Column(length = 1000)
@@ -40,12 +42,6 @@ public class ConceptEntity {
 
     @Column(columnDefinition = "TEXT")
     private String definition;
-
-    @Column(columnDefinition = "JSONB")
-    private String designations;
-
-    @Column(columnDefinition = "JSONB")
-    private String properties;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "code_system_id", nullable = false)

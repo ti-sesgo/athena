@@ -27,15 +27,15 @@ import org.springframework.context.event.EventListener;
 @Configuration
 @RequiredArgsConstructor
 public class PackageLoaderConfig {
-    
+
     private final PackageLoaderService packageLoaderService;
-    
+
     @Value("${athena.packages:}")
     private String packagesConfig;
-    
+
     @Value("${athena.packages.auto-load:true}")
     private boolean autoLoad;
-    
+
     /**
      * Carrega packages automaticamente após a aplicação estar pronta.
      */
@@ -45,18 +45,17 @@ public class PackageLoaderConfig {
             log.info("Carregamento automático de packages desabilitado");
             return;
         }
-        
+
         if (packagesConfig == null || packagesConfig.trim().isEmpty()) {
             log.warn("Nenhum package configurado para carregamento (athena.packages)");
             return;
         }
-        
+
         String[] packages = packagesConfig.split(",");
-        log.info("Iniciando carregamento automático de {} packages", packages.length);
-        
+        log.info("Packages configurados: {}", packages.length);
+
         try {
             packageLoaderService.loadPackages(packages);
-            log.info("Carregamento automático concluído com sucesso");
         } catch (Exception e) {
             log.error("Erro no carregamento automático de packages", e);
         }

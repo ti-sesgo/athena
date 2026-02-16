@@ -7,8 +7,6 @@ import br.gov.go.saude.athena.loader.ExtractedResource;
 import br.gov.go.saude.athena.loader.ResourceExtractor;
 import br.gov.go.saude.athena.repository.CodeSystemRepository;
 import br.gov.go.saude.athena.repository.ConceptRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
@@ -16,10 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -28,62 +25,88 @@ import java.util.concurrent.ExecutorService;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class CodeSystemLoaderService {
 
     private final ResourceExtractor resourceExtractor;
     private final CodeSystemRepository codeSystemRepository;
     private final ConceptRepository conceptRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final ExecutorService executorService;
     private final TransactionTemplate transactionTemplate;
+
+    public CodeSystemLoaderService(ResourceExtractor resourceExtractor,
+            CodeSystemRepository codeSystemRepository,
+            ConceptRepository conceptRepository,
+            ExecutorService executorService,
+            TransactionTemplate transactionTemplate) {
+        this.resourceExtractor = resourceExtractor;
+        this.codeSystemRepository = codeSystemRepository;
+        this.conceptRepository = conceptRepository;
+        this.executorService = executorService;
+        this.transactionTemplate = transactionTemplate;
+    }
 
     /**
      * Carrega todos os CodeSystems de um package.
      */
     public void loadCodeSystems(byte[] packageBytes, PackageEntity pkg) throws Exception {
+        log.info("Iniciando extração e carregamento de CodeSystems...");
         List<ExtractedResource> codeSystems = resourceExtractor.extractCodeSystems(packageBytes);
 
-        log.info("Encontrados {} CodeSystems no package {}", codeSystems.size(), pkg.getPackageId());
-
+        // Lista thread-safe para coletar resultados
+        List<LoadResult> results = new CopyOnWriteArrayList<>();
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         for (ExtractedResource extracted : codeSystems) {
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
+                LoadResult result;
                 try {
                     // Garante atomicidade por CodeSystem usando TransactionTemplate
-                    transactionTemplate.executeWithoutResult(status -> {
+                    result = transactionTemplate.execute(status -> {
                         try {
-                            loadCodeSystem(extracted, pkg);
+                            return loadCodeSystem(extracted, pkg);
                         } catch (Exception e) {
                             throw new RuntimeException(e);
                         }
                     });
                 } catch (Exception e) {
-                    log.error("Erro ao carregar CodeSystem: {}", e.getMessage(), e);
+                    // Captura erro real (desembrulha RuntimeException se necessário)
+                    Throwable cause = e.getCause() != null ? e.getCause() : e;
+                    result = LoadResult.builder()
+                            .url(extracted.resource().getIdElement().getIdPart()) // Fallback id
+                            .status("ERRO")
+                            .message(cause.getMessage())
+                            .build();
+                    log.error("Falha ao carregar {}: {}", result.url, cause.getMessage());
+                }
+                if (result != null) {
+                    results.add(result);
                 }
             }, executorService);
 
             futures.add(future);
         }
 
-        // Aguarda todos os CodeSystems serem processados
+        // Aguarda todos
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        logSummary(results, pkg);
     }
 
-    public void loadCodeSystem(ExtractedResource extracted, PackageEntity pkgEntity) throws Exception {
+    private LoadResult loadCodeSystem(ExtractedResource extracted, PackageEntity pkgEntity) throws Exception {
         CodeSystem codeSystem = (CodeSystem) extracted.resource();
 
         String resourceId = codeSystem.getIdElement().getIdPart();
         String url = codeSystem.getUrl();
         String version = codeSystem.getVersion();
 
-        log.info("Processando CodeSystem: {} (url: {}, versão: {})", url, url, version);
-
         // Verifica se já existe
         if (codeSystemRepository.findByUrlAndVersion(url, version).isPresent()) {
-            log.info("CodeSystem {} {} já existe, pulando", url, version);
-            return;
+            return LoadResult.builder()
+                    .url(url)
+                    .version(version)
+                    .status("IGNORADO")
+                    .message("Já existe")
+                    .build();
         }
 
         /*
@@ -98,13 +121,12 @@ public class CodeSystemLoaderService {
 
         // Salva CodeSystem
         CodeSystemEntity csEntity = CodeSystemEntity.builder()
-                .resourceId(resourceId != null ? resourceId : url) // Fallback para URL se não tiver ID
+                .resourceId(resourceId != null ? resourceId : url) // fallback
                 .url(url)
                 .version(version)
                 .name(codeSystem.getName())
                 .title(codeSystem.getTitle())
                 .status(status)
-                .description(codeSystem.getDescription())
                 .content(extracted.content())
                 .packageEntityRef(pkgEntity)
                 .isLatest(isLatest)
@@ -113,17 +135,27 @@ public class CodeSystemLoaderService {
         csEntity = codeSystemRepository.save(csEntity);
 
         // Carrega conceitos
+        int conceptsLoaded = 0;
         if (codeSystem.hasConcept()) {
             loadConcepts(codeSystem, csEntity);
+            conceptsLoaded = codeSystem.getConcept().size();
+            // TODO
+            // Note: loadConcepts is recursive, size() only gives top level.
+            // Better count would be deep,
+            // Let's stick to getConcept().size() as a rough indicator or improve later.
         }
 
-        log.info("CodeSystem {} carregado com {} conceitos",
-                url, codeSystem.getConcept() != null ? codeSystem.getConcept().size() : 0);
+        return LoadResult.builder()
+                .url(url)
+                .version(version)
+                .conceptCount(conceptsLoaded)
+                .status("SUCESSO")
+                .build();
     }
 
     private static final int BATCH_SIZE = 1000;
 
-    private void loadConcepts(CodeSystem codeSystem, CodeSystemEntity csEntity) throws Exception {
+    private void loadConcepts(CodeSystem codeSystem, CodeSystemEntity csEntity) {
         // Buffer iniciado com tamanho exato para evitar realocação
         List<ConceptEntity> buffer = new ArrayList<>(BATCH_SIZE);
 
@@ -139,28 +171,7 @@ public class CodeSystemLoaderService {
             CodeSystem.ConceptDefinitionComponent concept,
             CodeSystem codeSystem,
             CodeSystemEntity csEntity,
-            List<ConceptEntity> buffer) throws Exception {
-
-        /*
-         * Serializa estruturas complexas para JSON apenas se existirem.
-         */
-        String designationsJson = null;
-        if (concept.hasDesignation()) {
-            designationsJson = objectMapper.writeValueAsString(concept.getDesignation());
-        }
-
-        String propertiesJson = null;
-        if (concept.hasProperty()) {
-            Map<String, Object> props = new HashMap<>();
-            for (CodeSystem.ConceptPropertyComponent prop : concept.getProperty()) {
-                /*
-                 * TODO: Avaliar comportamento para valueCoding e outros tipos complexos.
-                 * Atualmente pegamos apenas o valor primitivo.
-                 */
-                props.put(prop.getCode(), prop.getValue().primitiveValue());
-            }
-            propertiesJson = objectMapper.writeValueAsString(props);
-        }
+            List<ConceptEntity> buffer) {
 
         ConceptEntity conceptEntity = ConceptEntity.builder()
                 .system(codeSystem.getUrl())
@@ -168,8 +179,6 @@ public class CodeSystemLoaderService {
                 .code(concept.getCode())
                 .display(concept.getDisplay())
                 .definition(concept.getDefinition())
-                .designations(designationsJson)
-                .properties(propertiesJson)
                 .codeSystem(csEntity)
                 .active(true)
                 .build();
@@ -194,5 +203,54 @@ public class CodeSystemLoaderService {
             conceptRepository.saveAll(buffer);
             buffer.clear();
         }
+    }
+
+    private void logSummary(List<LoadResult> results, PackageEntity pkg) {
+        StringBuilder sb = new StringBuilder();
+        // 135 chars separator
+        String separator = "\n==================================================================================================================================";
+        sb.append(separator);
+        sb.append("\n RELATÓRIO DE CARGA (CodeSystem) - ").append(pkg.getPackageId()).append(" : ")
+                .append(pkg.getVersion());
+        sb.append(separator);
+        sb.append(String.format("\n| %-87s | %-10s | %-10s | %-10s |", "URL / ID", "VERSÃO", "CONCEITOS", "STATUS"));
+        sb.append(
+                "\n|-----------------------------------------------------------------------------------------|------------|------------|------------|");
+
+        // Ordena por URL para facilitar leitura
+        results.stream()
+                .sorted((a, b) -> String.CASE_INSENSITIVE_ORDER.compare(a.url != null ? a.url : "",
+                        b.url != null ? b.url : ""))
+                .forEach(r -> {
+                    String subUrl = r.url != null && r.url.length() > 87 ? "..." + r.url.substring(r.url.length() - 84)
+                            : r.url;
+                    sb.append(String.format("\n| %-87s | %-10s | %-10d | %-10s |",
+                            subUrl,
+                            r.version != null ? r.version : "-",
+                            r.conceptCount,
+                            r.status));
+                });
+
+        sb.append(separator);
+        int total = results.size();
+        long success = results.stream().filter(r -> "SUCESSO".equals(r.status)).count();
+        long ignored = results.stream().filter(r -> "IGNORADO".equals(r.status)).count();
+        long errors = results.stream().filter(r -> "ERRO".equals(r.status)).count();
+
+        sb.append(String.format("\n TOTAL: %d  |  SUCESSO: %d  |  IGNORADO: %d  |  ERRO: %d", total, success, ignored,
+                errors));
+        sb.append(separator);
+
+        log.info(sb.toString());
+    }
+
+    @lombok.Builder
+    @lombok.Getter
+    private static class LoadResult {
+        String url;
+        String version;
+        int conceptCount;
+        String status;
+        String message;
     }
 }

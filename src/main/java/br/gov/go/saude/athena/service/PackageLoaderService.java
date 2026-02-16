@@ -34,14 +34,16 @@ public class PackageLoaderService {
      * Formato: "path/to/file.tgz" ou "packageId:version"
      */
     public void loadPackages(String[] packagesRef) {
+        long startTime = System.nanoTime();
         log.info("Iniciando carregamento de {} packages", packagesRef.length);
+        List<PackageSource> pkgs = new ArrayList<>();
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();
 
         for (String packageRef : packagesRef) {
             CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
                 try {
-                    loadPackage(packageRef);
+                    pkgs.add(loadPackage(packageRef));
                 } catch (Exception e) {
                     log.error("Erro ao carregar package {}: {}", packageRef, e.getMessage(), e);
                 }
@@ -52,26 +54,28 @@ public class PackageLoaderService {
 
         // Aguarda todos os packages serem carregados
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-
-        log.info("Carregamento de packages concluído");
+        long endTime = System.nanoTime();
+        long duration = endTime - startTime;
+        log.info("Carregamento de packages concluído em {} s", duration / 1_000_000_000L);
     }
 
-    public void loadPackage(String packageRef) throws Exception {
+    public PackageSource loadPackage(String packageRef) throws Exception {
         PackageSource source = createPackageSource(packageRef);
 
         // Verifica se já está carregado
         if (packageRepository.findByPackageIdAndVersion(source.getPackageId(), source.getVersion()).isPresent()) {
             log.info("Package {}:{} já carregado, pulando", source.getPackageId(), source.getVersion());
-            return;
+            return source;
         }
 
-        log.info("Carregando package: {}:{}", source.getPackageId(), source.getVersion());
+        log.info("Salvando package: {}:{}", source.getPackageId(), source.getVersion());
 
+        String registryUrl = String.format("%s/%s/%s", "https://packages.fhir.org", source.getPackageId(), source.getVersion());
         // Salva metadados do package
         PackageEntity pkg = PackageEntity.builder()
                 .packageId(source.getPackageId())
                 .version(source.getVersion())
-                .registryUrl(source instanceof RegistryPackageSource ? "https://packages.fhir.org" : null)
+                .registryUrl(source instanceof RegistryPackageSource ? registryUrl : null)
                 .loadedAt(LocalDateTime.now())
                 .active(true)
                 .build();
@@ -85,6 +89,7 @@ public class PackageLoaderService {
         codeSystemLoaderService.loadCodeSystems(packageBytes, pkg);
 
         log.info("Package {}:{} carregado com sucesso", source.getPackageId(), source.getVersion());
+        return source;
     }
 
     private PackageSource createPackageSource(String packageRef) {

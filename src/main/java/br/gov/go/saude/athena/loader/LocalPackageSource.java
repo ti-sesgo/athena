@@ -36,14 +36,12 @@ public class LocalPackageSource implements PackageSource {
             log.debug("Metadados extraídos: {} {}", packageId, version);
 
         } catch (IOException e) {
-            // Fallback: usa nome do arquivo
             log.warn("Erro ao extrair metadados, usando nome do arquivo: {}", e.getMessage());
         }
     }
 
     @Override
     public byte[] load() throws IOException {
-        log.info("Carregando package local: {}:{}", packageId, version);
         return Files.readAllBytes(filePath);
     }
 

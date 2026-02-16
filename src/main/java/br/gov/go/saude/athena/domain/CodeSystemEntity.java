@@ -42,27 +42,27 @@ public class CodeSystemEntity {
      * ID lógico FHIR do recurso (business key).
      * Exemplo: "loinc", "snomed-ct", "icd-10"
      */
-    @Column(nullable = false, length = 255)
+    @Column(nullable = false)
     private String resourceId;
 
     /**
      * URL canônica do CodeSystem.
      * Exemplo: "http://loinc.org"
      */
-    @Column(nullable = false, length = 500)
+    @Column(nullable = false)
     private String url;
 
     /**
      * Versão do CodeSystem.
      * Exemplo: "2.75"
      */
-    @Column(length = 100)
+    @Column
     private String version;
 
-    @Column(length = 255)
+    @Column
     private String name;
 
-    @Column(length = 500)
+    @Column
     private String title;
 
     /**
@@ -70,16 +70,12 @@ public class CodeSystemEntity {
      * Usa enum do HAPI FHIR diretamente.
      */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false)
     private PublicationStatus status;
-
-    @Column(columnDefinition = "TEXT")
-    private String description;
 
     /**
      * Conteúdo completo do recurso FHIR em JSON.
      */
-    @Lob
     @Column(nullable = false)
     private byte[] content;
 
