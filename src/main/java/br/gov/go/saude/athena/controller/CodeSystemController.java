@@ -104,7 +104,8 @@ public class CodeSystemController {
             outcome.addIssue()
                     .setSeverity(OperationOutcome.IssueSeverity.ERROR)
                     .setCode(OperationOutcome.IssueType.INVALID)
-                    .setDiagnostics("System and code are required for lookup operation | system=" + system + ", code=" + code);
+                    .setDiagnostics(
+                            "System and code are required for lookup operation | system=" + system + ", code=" + code);
 
             IParser parser = fhirContext.newJsonParser();
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(parser.encodeResourceToString(outcome));
@@ -125,9 +126,26 @@ public class CodeSystemController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(parser.encodeResourceToString(outcome));
         }
 
+        ConceptDisplayProjection p = projection.get();
+
         // Monta o retorno Parameters conforme spec FHIR
         Parameters parameters = new Parameters();
-        parameters.addParameter("display", new StringType(projection.get().getDisplay()));
+
+        // 1. Name (Obrigatório)
+        parameters.addParameter("name", new StringType(p.getCodeSystemName()));
+
+        // 2. Version (Obrigatório se o CodeSystem tiver versão)
+        if (p.getCodeSystemVersion() != null) {
+            parameters.addParameter("version", new StringType(p.getCodeSystemVersion()));
+        }
+
+        // 3. Display (Obrigatório)
+        parameters.addParameter("display", new StringType(p.getDisplay()));
+
+        // 4. Definition (Opcional/Recomendado)
+        if (p.getDefinition() != null) {
+            parameters.addParameter("definition", new StringType(p.getDefinition()));
+        }
 
         // Padrão do projeto: retornar JSON simples e legível
         IParser parser = fhirContext.newJsonParser();

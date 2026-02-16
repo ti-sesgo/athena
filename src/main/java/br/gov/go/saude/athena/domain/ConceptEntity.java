@@ -5,8 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /**
  * Representa um conceito (código) de um CodeSystem.
@@ -14,8 +12,8 @@ import org.hibernate.type.SqlTypes;
  */
 @Entity
 @Table(name = "concepts", schema = "terminology", indexes = {
-        @Index(name = "idx_concept_lookup", columnList = "system, code, active, display"),
-        @Index(name = "idx_concept_lookup_version", columnList = "system, code, version"),
+        @Index(name = "idx_concept_lookup", columnList = "system, code, active, display, codeSystemName, codeSystemVersion"),
+        @Index(name = "idx_concept_lookup_version", columnList = "system, code, version, codeSystemName"),
         @Index(name = "idx_concept_code_system", columnList = "code_system_id")
 })
 @Data
@@ -39,6 +37,12 @@ public class ConceptEntity {
 
     @Column(length = 1000)
     private String display;
+
+    @Column
+    private String codeSystemName;
+
+    @Column
+    private String codeSystemVersion;
 
     @Column(columnDefinition = "TEXT")
     private String definition;

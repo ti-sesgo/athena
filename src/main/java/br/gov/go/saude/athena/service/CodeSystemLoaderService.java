@@ -173,12 +173,19 @@ public class CodeSystemLoaderService {
             CodeSystemEntity csEntity,
             List<ConceptEntity> buffer) {
 
+        // Fallback: title > name > url (CodeSystem name é obrigatório)
+        String csName = codeSystem.hasTitle() ? codeSystem.getTitle()
+                : (codeSystem.hasName() ? codeSystem.getName() : codeSystem.getUrl());
+        String csVersion = codeSystem.getVersion();
+
         ConceptEntity conceptEntity = ConceptEntity.builder()
                 .system(codeSystem.getUrl())
                 .version(codeSystem.getVersion())
                 .code(concept.getCode())
                 .display(concept.getDisplay())
                 .definition(concept.getDefinition())
+                .codeSystemName(csName)
+                .codeSystemVersion(csVersion)
                 .codeSystem(csEntity)
                 .active(true)
                 .build();

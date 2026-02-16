@@ -107,9 +107,15 @@ class CodeSystemControllerTest {
         String system = "http://test.com/cs";
         String code = "TEST-CODE";
         String display = "Test Display Name";
+        String csName = "Test Code System";
+        String csVersion = "1.0.0";
+        String definition = "Test Definition";
 
         ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
         when(projection.getDisplay()).thenReturn(display);
+        when(projection.getCodeSystemName()).thenReturn(csName);
+        when(projection.getCodeSystemVersion()).thenReturn(csVersion);
+        when(projection.getDefinition()).thenReturn(definition);
 
         when(conceptRepository.findDisplayBySystemAndCodeAndActiveTrue(system, code))
                 .thenReturn(Optional.of(projection));
@@ -127,6 +133,18 @@ class CodeSystemControllerTest {
         assertTrue(parameters.hasParameter("display"));
         assertEquals(display,
                 ((org.hl7.fhir.r4.model.StringType) parameters.getParameter("display").getValue()).getValue());
+
+        assertTrue(parameters.hasParameter("name"));
+        assertEquals(csName,
+                ((org.hl7.fhir.r4.model.StringType) parameters.getParameter("name").getValue()).getValue());
+
+        assertTrue(parameters.hasParameter("version"));
+        assertEquals(csVersion,
+                ((org.hl7.fhir.r4.model.StringType) parameters.getParameter("version").getValue()).getValue());
+
+        assertTrue(parameters.hasParameter("definition"));
+        assertEquals(definition,
+                ((org.hl7.fhir.r4.model.StringType) parameters.getParameter("definition").getValue()).getValue());
     }
 
     @Test
