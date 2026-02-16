@@ -8,7 +8,9 @@ import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.Parameters;
+import org.springframework.http.ResponseEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -113,9 +115,12 @@ class CodeSystemControllerTest {
                 .thenReturn(Optional.of(projection));
 
         // Act
-        String result = controller.lookup(system, code);
+        ResponseEntity<String> response = controller.lookup(system, code);
 
         // Assert
+        assertEquals(200, response.getStatusCode().value());
+
+        String result = response.getBody();
         assertNotNull(result);
         Parameters parameters = jsonParser.parseResource(Parameters.class, result);
 
@@ -133,9 +138,43 @@ class CodeSystemControllerTest {
         when(conceptRepository.findDisplayBySystemAndCodeAndActiveTrue(system, code))
                 .thenReturn(Optional.empty());
 
-        // Act & Assert
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
-                () -> controller.lookup(system, code));
-        assertEquals(404, exception.getStatusCode().value());
+        // Act
+        ResponseEntity<String> response = controller.lookup(system, code);
+
+        // Assert
+        assertEquals(404, response.getStatusCode().value());
+
+        String result = response.getBody();
+        assertNotNull(result);
+
+        OperationOutcome outcome = jsonParser.parseResource(OperationOutcome.class, result);
+        assertNotNull(outcome);
+        assertTrue(outcome.hasIssue());
+        assertEquals(OperationOutcome.IssueSeverity.ERROR, outcome.getIssueFirstRep().getSeverity());
+        assertEquals(OperationOutcome.IssueType.NOTFOUND, outcome.getIssueFirstRep().getCode());
+        assertTrue(outcome.getIssueFirstRep().getDiagnostics().contains(code));
+    }
+
+    @Test
+    void shouldReturnBadRequestWhenSystemOrCodeIsMissing() {
+        // Arrange
+        String system = "http://test.com/cs";
+        String code = null;
+
+        // Act
+        ResponseEntity<String> response = controller.lookup(system, code);
+
+        // Assert
+        assertEquals(400, response.getStatusCode().value());
+
+        String result = response.getBody();
+        assertNotNull(result);
+
+        OperationOutcome outcome = jsonParser.parseResource(OperationOutcome.class, result);
+        assertNotNull(outcome);
+        assertTrue(outcome.hasIssue());
+        assertEquals(OperationOutcome.IssueSeverity.ERROR, outcome.getIssueFirstRep().getSeverity());
+        assertEquals(OperationOutcome.IssueType.INVALID, outcome.getIssueFirstRep().getCode());
+        assertTrue(outcome.getIssueFirstRep().getDiagnostics().contains("System and code are required"));
     }
 }

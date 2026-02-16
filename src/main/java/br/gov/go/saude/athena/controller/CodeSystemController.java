@@ -13,6 +13,8 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.hl7.fhir.r4.model.OperationOutcome;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -88,30 +90,39 @@ public class CodeSystemController {
      * GET /CodeSystem/$lookup?system={system}&code={code}
      */
     @GetMapping(value = "/$lookup", produces = "application/fhir+json")
-    public String lookup(@RequestParam String system, @RequestParam String code) {
-        log.debug("Lookup operation: system={}, code={}", system, code);
+    public ResponseEntity<String> lookup(@RequestParam(required = false) String system,
+            @RequestParam(required = false) String code) {
+
+        log.debug("Lookup GET operation: system={}, code={}", system, code);
         return performLookup(system, code);
     }
 
-    /**
-     * Operação $lookup (bypassing body parsing for simplicity, assuming params in
-     * query string or standard form).
-     * <br>
-     * POST /CodeSystem/$lookup
-     */
-    @PostMapping(value = "/$lookup", produces = "application/fhir+json")
-    public String lookupPost(@RequestParam String system, @RequestParam String code) {
-        log.debug("Lookup POST operation: system={}, code={}", system, code);
-        return performLookup(system, code);
-    }
+    private ResponseEntity<String> performLookup(String system, String code) {
 
-    private String performLookup(String system, String code) {
+        if (system == null || code == null) {
+            OperationOutcome outcome = new OperationOutcome();
+            outcome.addIssue()
+                    .setSeverity(OperationOutcome.IssueSeverity.ERROR)
+                    .setCode(OperationOutcome.IssueType.INVALID)
+                    .setDiagnostics("System and code are required for lookup operation | system=" + system + ", code=" + code);
+
+            IParser parser = fhirContext.newJsonParser();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(parser.encodeResourceToString(outcome));
+        }
+
         // Uso da projeção otimizada: busca APENAS o display name usando Index Only Scan
         Optional<ConceptDisplayProjection> projection = conceptRepository
                 .findDisplayBySystemAndCodeAndActiveTrue(system, code);
 
         if (projection.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Conceito não encontrado: " + system + "|" + code);
+            OperationOutcome outcome = new OperationOutcome();
+            outcome.addIssue()
+                    .setSeverity(OperationOutcome.IssueSeverity.ERROR)
+                    .setCode(OperationOutcome.IssueType.NOTFOUND)
+                    .setDiagnostics("Unable to find code[" + code + "] in system[" + system + "]");
+
+            IParser parser = fhirContext.newJsonParser();
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(parser.encodeResourceToString(outcome));
         }
 
         // Monta o retorno Parameters conforme spec FHIR
@@ -120,7 +131,7 @@ public class CodeSystemController {
 
         // Padrão do projeto: retornar JSON simples e legível
         IParser parser = fhirContext.newJsonParser();
-        return parser.encodeResourceToString(parameters);
+        return ResponseEntity.ok(parser.encodeResourceToString(parameters));
     }
 
     private Long tryParseId(String id) {
