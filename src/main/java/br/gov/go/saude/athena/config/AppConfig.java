@@ -2,17 +2,21 @@ package br.gov.go.saude.athena.config;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class AppConfig {
-    
+
     /**
      * Configura o contexto FHIR R4 como bean singleton.
      * 
-     * <p>FhirContext é thread-safe e deve ser reutilizado durante toda a vida da aplicação.
-     * É custoso criar múltiplas instâncias pois realiza scan de classes de recursos.
+     * <p>
+     * FhirContext é thread-safe e deve ser reutilizado durante toda a vida da
+     * aplicação.
+     * É custoso criar múltiplas instâncias pois realiza scan de classes de
+     * recursos.
      * 
      * @return contexto FHIR R4 configurado
      */
@@ -23,23 +27,13 @@ public class AppConfig {
 
     /**
      * Cria um parser JSON para serialização/deserialização de recursos FHIR.
-     * 
+     * Necessário para CapabilityStatementController.
+     *
      * @param fhirContext contexto FHIR configurado
      * @return parser JSON configurado para FHIR R4
      */
     @Bean
-    public static IParser jsonParser(FhirContext fhirContext) {
+    public IParser jsonParser(FhirContext fhirContext) {
         return fhirContext.newJsonParser();
-    }
-
-    /**
-     * Cria um parser XML para serialização/deserialização de recursos FHIR.
-     * 
-     * @param fhirContext contexto FHIR configurado
-     * @return parser XML configurado para FHIR R4
-     */
-    @Bean
-    public static IParser xmlParser(FhirContext fhirContext) {
-        return fhirContext.newXmlParser();
     }
 }

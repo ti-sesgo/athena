@@ -11,9 +11,6 @@ spring:
     password: ${DB_PASSWORD:senha-segura}
     driver-class-name: org.postgresql.Driver
 
-  mvc:
-    problemdetails:
-      enabled: true
   web:
     resources:
       add-mappings: false
