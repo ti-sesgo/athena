@@ -10,6 +10,7 @@ import org.hl7.fhir.r4.model.CodeableConcept;
 import ca.uhn.fhir.parser.DataFormatException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class FhirExceptionHandler {
@@ -43,8 +44,9 @@ public class FhirExceptionHandler {
         .body(outcome);
   }
 
-  @ExceptionHandler(NoHandlerFoundException.class)
-  public ResponseEntity<OperationOutcome> handleNoHandlerFound(NoHandlerFoundException e) {
+  @ExceptionHandler({ NoHandlerFoundException.class,
+      NoResourceFoundException.class })
+  public ResponseEntity<OperationOutcome> handleNoHandlerFound(Exception e) {
     OperationOutcome outcome = new OperationOutcome();
     outcome.addIssue()
         .setSeverity(OperationOutcome.IssueSeverity.ERROR)

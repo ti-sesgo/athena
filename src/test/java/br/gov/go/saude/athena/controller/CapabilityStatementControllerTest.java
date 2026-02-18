@@ -26,7 +26,7 @@ class CapabilityStatementControllerTest {
 
         @Test
         void shouldReturnCapabilityStatementInternal() throws Exception {
-                mockMvc.perform(get("/metadata")
+                mockMvc.perform(get("/fhir/metadata")
                                 .accept("application/fhir+json"))
                                 .andExpect(status().isOk())
                                 .andExpect(content().contentType("application/fhir+json"))
@@ -35,7 +35,7 @@ class CapabilityStatementControllerTest {
 
         @Test
         void shouldReturn405WhenMethodNotAllowed() throws Exception {
-                mockMvc.perform(post("/metadata")
+                mockMvc.perform(post("/fhir/metadata")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{}"))
                                 .andExpect(status().isMethodNotAllowed())
