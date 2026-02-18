@@ -12,7 +12,8 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   mvc:
-    throw-exception-if-no-handler-found: true
+    problemdetails:
+      enabled: true
   web:
     resources:
       add-mappings: false
@@ -39,6 +40,9 @@ spring:
 athena:
   packages:
     auto-load: true
+    # Descrever package a ser carregado:
+    # Localmente: path do package FHIR local (ex: /Users/danie/packages/my-package.tgz)
+    # Remotamente via registry FHIR: {id}:{versão} (ex: hl7.fhir.r4.core:4.0.1)
     items:
       - br.go.ses.reds-go:1.0.0
       - br.go.ses.core:1.1.0
