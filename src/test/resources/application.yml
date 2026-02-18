@@ -1,0 +1,29 @@
+server:
+  port: 0  # Random port for tests
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: false  # Disable Flyway for tests to rely on Hibernate ddl-auto
+
+athena:
+  packages:
+    auto-load: false # Disable package loading in tests by default
+
+logging:
+  level:
+    br.gov.go.saude.athena: DEBUG

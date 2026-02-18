@@ -3,7 +3,6 @@ package br.gov.go.saude.athena.controller;
 import br.gov.go.saude.athena.repository.ConceptDisplayProjection;
 import br.gov.go.saude.athena.service.CodeSystemService;
 
-import org.hl7.fhir.instance.model.api.IBase;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
