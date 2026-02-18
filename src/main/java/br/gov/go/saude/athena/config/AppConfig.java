@@ -31,4 +31,15 @@ public class AppConfig {
     public static IParser jsonParser(FhirContext fhirContext) {
         return fhirContext.newJsonParser();
     }
+
+    /**
+     * Cria um parser XML para serialização/deserialização de recursos FHIR.
+     * 
+     * @param fhirContext contexto FHIR configurado
+     * @return parser XML configurado para FHIR R4
+     */
+    @Bean
+    public static IParser xmlParser(FhirContext fhirContext) {
+        return fhirContext.newXmlParser();
+    }
 }

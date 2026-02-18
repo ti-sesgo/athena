@@ -6,6 +6,7 @@ import br.gov.go.saude.athena.repository.ConceptDisplayProjection;
 import br.gov.go.saude.athena.repository.ConceptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hl7.fhir.r4.model.CodeSystem;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
@@ -17,6 +18,25 @@ public class CodeSystemService {
 
     private final CodeSystemRepository codeSystemRepository;
     private final ConceptRepository conceptRepository;
+    private final ca.uhn.fhir.context.FhirContext fhirContext;
+
+    /**
+     * Busca um CodeSystem pelo ID lógico ou ID interno e retorna como recurso HAPI.
+     */
+    public Optional<CodeSystem> findResourceById(String id) {
+        return findById(id).map(this::parseEntity);
+    }
+
+    /**
+     * Busca um CodeSystem pela URL canônica e retorna como recurso HAPI.
+     */
+    public Optional<CodeSystem> findResourceByUrl(String url) {
+        return findByUrl(url).map(this::parseEntity);
+    }
+
+    private CodeSystem parseEntity(CodeSystemEntity entity) {
+        return fhirContext.newJsonParser().parseResource(CodeSystem.class, new String(entity.getContent()));
+    }
 
     /**
      * Busca um CodeSystem pelo ID lógico ou ID interno.

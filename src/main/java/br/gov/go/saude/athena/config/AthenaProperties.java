@@ -1,6 +1,6 @@
 package br.gov.go.saude.athena.config;
 
-import lombok.Data;
+import lombok.Getter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,7 +9,7 @@ import java.util.List;
 
 @Configuration
 @ConfigurationProperties(prefix = "athena.packages")
-@Data
+@Getter
 public class AthenaProperties {
     /**
      * Habilita o carregamento automático de packages.

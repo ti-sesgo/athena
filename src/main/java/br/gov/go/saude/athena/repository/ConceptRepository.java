@@ -47,8 +47,7 @@ public interface ConceptRepository extends JpaRepository<ConceptEntity, Long> {
         Optional<ConceptEntity> findLatestBySystemAndCode(@Param("system") String system, @Param("code") String code);
 
         /**
-         * Projeção otimizada para recuperar apenas o display name e metadados do
-         * CodeSystem.
+         * Projeção otimizada para recuperar dados de um conceito
          * Permite execução via Index Only Scan no banco de dados.
          */
         Optional<ConceptDisplayProjection> findDisplayBySystemAndCodeAndActiveTrue(String system, String code);

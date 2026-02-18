@@ -3,6 +3,7 @@ package br.gov.go.saude.athena.controller;
 import ca.uhn.fhir.parser.IParser;
 import lombok.RequiredArgsConstructor;
 import org.hl7.fhir.r4.model.CapabilityStatement;
+import org.hl7.fhir.r4.model.CodeType;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.hl7.fhir.r4.model.Enumerations.FHIRVersion;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,8 +33,10 @@ public class CapabilityStatementController {
                                 .setVersion("0.0.1"));
                 capabilityStatement.setFhirVersion(FHIRVersion._4_0_1);
                 capabilityStatement.setFormat(java.util.List.of(
-                                new org.hl7.fhir.r4.model.CodeType("application/fhir+json"),
-                                new org.hl7.fhir.r4.model.CodeType("json")));
+                                new CodeType("application/fhir+json"),
+                                new CodeType("json"),
+                                new CodeType("application/xml"),
+                                new CodeType("xml")));
 
                 CapabilityStatement.CapabilityStatementRestComponent rest = capabilityStatement.addRest();
                 rest.setMode(CapabilityStatement.RestfulCapabilityMode.SERVER);
