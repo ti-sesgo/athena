@@ -19,6 +19,11 @@ public class AthenaProperties {
     private boolean autoLoad = true;
 
     /**
+     * URL do FHIR Registry.
+     */
+    private String registryUrl = "https://packages.fhir.org";
+
+    /**
      * Lista de packages a serem carregados.
      */
     private List<String> items = new ArrayList<>();

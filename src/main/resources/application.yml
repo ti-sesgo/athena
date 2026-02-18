@@ -37,6 +37,8 @@ spring:
 athena:
   packages:
     auto-load: true
+    # URL do Registry (opcional, default: https://packages.fhir.org)
+    registry-url: https://packages.fhir.org
     # Descrever package a ser carregado:
     # Localmente: path do package FHIR local (ex: /Users/danie/packages/my-package.tgz)
     # Remotamente via registry FHIR: {id}:{versão} (ex: hl7.fhir.r4.core:4.0.1)

@@ -1,5 +1,6 @@
 package br.gov.go.saude.athena.service;
 
+import br.gov.go.saude.athena.config.AthenaProperties;
 import br.gov.go.saude.athena.domain.PackageEntity;
 import br.gov.go.saude.athena.loader.LocalPackageSource;
 import br.gov.go.saude.athena.loader.PackageSource;
@@ -28,6 +29,7 @@ public class PackageLoaderService {
     private final PackageRepository packageRepository;
     private final CodeSystemLoaderService codeSystemLoaderService;
     private final ExecutorService executorService;
+    private final AthenaProperties athenaProperties;
 
     /**
      * Carrega packages a partir de configuração.
@@ -70,7 +72,8 @@ public class PackageLoaderService {
 
         log.info("Salvando package: {}:{}", source.getPackageId(), source.getVersion());
 
-        String registryUrl = String.format("%s/%s/%s", "https://packages.fhir.org", source.getPackageId(), source.getVersion());
+        String registryUrl = String.format("%s/%s/%s", athenaProperties.getRegistryUrl(), source.getPackageId(),
+                source.getVersion());
         // Salva metadados do package
         PackageEntity pkg = PackageEntity.builder()
                 .packageId(source.getPackageId())
@@ -96,7 +99,7 @@ public class PackageLoaderService {
         if (packageRef.contains(":")) {
             // Formato: packageId:version
             String[] parts = packageRef.split(":");
-            return new RegistryPackageSource(parts[0], parts[1], executorService);
+            return new RegistryPackageSource(parts[0], parts[1], athenaProperties.getRegistryUrl(), executorService);
         } else {
             // Formato: path/to/file.tgz
             File file = new File(packageRef);

@@ -20,17 +20,11 @@ import java.util.concurrent.ExecutorService;
 @Slf4j
 public class RegistryPackageSource implements PackageSource {
 
-    private static final String DEFAULT_REGISTRY = "https://packages.fhir.org";
-
     private final String packageId;
     private final String version;
     private final String registryUrl;
     private final HttpClient httpClient;
     private final CompletableFuture<byte[]> loadingFuture;
-
-    public RegistryPackageSource(String packageId, String version, ExecutorService executor) {
-        this(packageId, version, DEFAULT_REGISTRY, executor);
-    }
 
     public RegistryPackageSource(String packageId, String version, String registryUrl, ExecutorService executor) {
         this.packageId = packageId;
@@ -123,5 +117,9 @@ public class RegistryPackageSource implements PackageSource {
     @Override
     public String getVersion() {
         return version;
+    }
+
+    String getRegistryUrl() {
+        return registryUrl;
     }
 }
