@@ -21,6 +21,27 @@ curl -X GET "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?syste
   -H "Accept: application/fhir+json"
 ```
 
+### Parâmetros de Formato
+
+O servidor suporta os parâmetros `_format` e `_pretty` em qualquer requisição para controlar a serialização da resposta.
+
+| Parâmetro | Valores aceitos | Padrão | Descrição |
+|-----------|----------------|--------|-----------|
+| `_format` | `json`, `application/json`, `application/fhir+json` | `json` | Resposta em JSON |
+| `_format` | `xml`, `text/xml`, `application/xml`, `application/fhir+xml` | — | Resposta em XML |
+| `_pretty` | `true`, `false` | `false` | Indenta a resposta para leitura humana |
+
+Exemplos:
+
+```sh
+# Resposta em JSON (padrão)
+curl "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?system=...&code=A90&_format=json"
+
+# Resposta em XML formatada
+curl "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?system=...&code=A90&_format=xml&_pretty=true"
+```
+
+> Os mesmos formatos podem ser solicitados via header `Accept` (`application/fhir+json` ou `application/fhir+xml`). Quando ambos estão presentes, `_format` tem precedência.
 
 | Operação                 | Endpoint                            | Descrição                                                                                                         | Requisito Mínimo | Status              |
 |--------------------------|-------------------------------------|-------------------------------------------------------------------------------------------------------------------|------------------|---------------------|
