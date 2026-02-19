@@ -6,6 +6,20 @@ O servidor de terminologias FHIR mais rápido e simples do mundo!
 
 ## Operações do Servidor de Terminologia
 
+> 🚨 Trabalho em andamento. O uso do serviço em produção é de inteiro risco e responsabilidade do usuário.
+
+Serviço disponível na url base: https://terminologias.saude.go.gov.br/fhir
+
+Exemplo de requisição: 
+
+- Operação $lookup
+- system = http://www.saude.gov.br/fhir/r4/CodeSystem/BRCID10
+- code = A90
+
+```sh
+curl -X GET "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?system=http://www.saude.gov.br/fhir/r4/CodeSystem/BRCID10&code=A90&_format=json" \
+  -H "Accept: application/fhir+json"
+```
 
 
 | Operação                 | Endpoint                            | Descrição                                                                                                         | Requisito Mínimo | Status              |
