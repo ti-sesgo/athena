@@ -20,11 +20,13 @@
 
     <developers>
         <developer>
-            <name>Daniel Nogueira</name>
+            <name>Daniel Nogueira da Costa</name>
+            <email>me@nogueiralegacy.com</email>
             <url>https://github.com/nogueiralegacy</url>
         </developer>
         <developer>
-            <name>Fábio Lucena</name>
+            <name>Fábio Nogueira de Lucena</name>
+            <email>fabio@inf.ufg.br</email>
             <url>https://github.com/kyriosdata</url>
         </developer>
     </developers>
