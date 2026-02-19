@@ -27,3 +27,15 @@ athena:
 logging:
   level:
     br.gov.go.saude.athena: DEBUG
+
+management:
+  server:
+    port: 9090
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
