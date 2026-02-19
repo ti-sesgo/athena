@@ -35,6 +35,8 @@ spring:
     baseline-on-migrate: true
 
 athena:
+  landing-page:
+    enabled: true
   packages:
     auto-load: true
     # URL do Registry (opcional, default: https://packages.fhir.org)

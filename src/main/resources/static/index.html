@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Athena — Servidor de Terminologias FHIR | SES-GO</title>
+  <meta name="description"
+    content="Athena é o Servidor de Terminologias FHIR da Secretaria de Estado da Saúde de Goiás (SES-GO).">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --ses-green: #1B6B3A;
+      --ses-green-light: #238C4E;
+      --surface: #F8F9FB;
+      --surface-card: #FFFFFF;
+      --text-primary: #1A1D21;
+      --text-secondary: #5A6169;
+      --text-muted: #8B939C;
+      --border: #E2E6EA;
+      --border-light: #EFF1F3;
+      --green-bg: rgba(27, 107, 58, 0.07);
+      --radius: 14px;
+      --radius-sm: 8px;
+      --get-green: #2E7D32;
+      --get-bg: #E8F5E9;
+      --post-blue: #1565C0;
+      --post-bg: #E3F2FD;
+      --mono: 'JetBrains Mono', monospace;
+      --dark-bg: #1E1E2E;
+      --dark-text: #CDD6F4;
+      --dark-muted: #6C7086;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--surface);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Shared section container ─── */
+    .section {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 0 2rem 2.5rem;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .section-header p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .section-header a {
+      color: var(--ses-green);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    /* ─── Hero ─── */
+    .hero {
+      text-align: center;
+      padding: 2.5rem 2rem 2rem;
+    }
+
+    .hero h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.5rem;
+      color: var(--ses-green);
+    }
+
+    .hero p {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /* ─── Playground ─── */
+    .playground {
+      padding-top: 1.5rem;
+    }
+
+    .playground-card {
+      background: var(--surface-card);
+      border: 2px solid var(--ses-green);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(27, 107, 58, 0.1);
+    }
+
+    .playground-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.5rem;
+      background: linear-gradient(135deg, var(--ses-green) 0%, var(--ses-green-light) 100%);
+      color: white;
+    }
+
+    .playground-header h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .playground-header h2 svg {
+      width: 18px;
+      height: 18px;
+      fill: white;
+    }
+
+    .playground-body {
+      padding: 1.5rem;
+    }
+
+    /* ─── Toggles ─── */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .toggle-group {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    .toggle-group button {
+      padding: 0.45rem 1.2rem;
+      border: none;
+      background: white;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-muted);
+    }
+
+    .toggle-group button+button {
+      border-left: 1px solid var(--border);
+    }
+
+    .toggle-group button.active-get {
+      background: var(--get-bg);
+      color: var(--get-green);
+    }
+
+    .toggle-group button.active-post {
+      background: var(--post-bg);
+      color: var(--post-blue);
+    }
+
+    .toggle-group button.active-fmt {
+      background: #F3E8FF;
+      color: #7C3AED;
+    }
+
+    .toggle-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    /* ─── Form ─── */
+    .form-row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .form-group {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      background: white;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--ses-green);
+      box-shadow: 0 0 0 3px var(--green-bg);
+    }
+
+    /* ─── Code panels (shared dark theme) ─── */
+    .dark-panel {
+      background: var(--dark-bg);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      margin-bottom: 0.75rem;
+    }
+
+    .dark-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.4rem 0.85rem;
+      background: #181825;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      color: var(--dark-muted);
+    }
+
+    .dark-panel-body {
+      padding: 0.65rem 0.85rem;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.5;
+      color: var(--dark-text);
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+
+    .preview-method-get {
+      color: #A6E3A1;
+      font-weight: 600;
+    }
+
+    .preview-method-post {
+      color: #89B4FA;
+      font-weight: 600;
+    }
+
+    .preview-url {
+      color: #F5C2E7;
+    }
+
+    /* ─── Run button ─── */
+    .btn-run {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.5rem;
+      background: linear-gradient(135deg, var(--ses-green) 0%, var(--ses-green-light) 100%);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-run:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(27, 107, 58, 0.25);
+    }
+
+    .btn-run:active {
+      transform: translateY(0);
+    }
+
+    .btn-run:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-run svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* ─── Result panel ─── */
+    .result-panel {
+      margin-top: 1rem;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      display: none;
+    }
+
+    .result-panel.visible {
+      display: block;
+    }
+
+    .result-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.85rem;
+      background: var(--dark-bg);
+      color: var(--dark-text);
+      font-size: 0.72rem;
+      font-family: var(--mono);
+    }
+
+    .result-status {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .dot.success {
+      background: #A6E3A1;
+    }
+
+    .dot.error {
+      background: #F38BA8;
+    }
+
+    .result-body {
+      background: var(--dark-bg);
+      padding: 1rem;
+      overflow-y: auto;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      line-height: 1.6;
+      color: var(--dark-text);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* ─── Syntax highlighting (shared JSON + XML) ─── */
+    .hl-key {
+      color: #89B4FA;
+    }
+
+    .hl-str {
+      color: #A6E3A1;
+    }
+
+    .hl-num {
+      color: #FAB387;
+    }
+
+    .hl-bool {
+      color: #CBA6F7;
+    }
+
+    .hl-null {
+      color: var(--dark-muted);
+    }
+
+    /* ─── Operations table ─── */
+    .ops-table-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    }
+
+    .ops-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .ops-table thead th {
+      background: var(--surface);
+      padding: 0.65rem 1rem;
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .ops-table tbody tr {
+      border-bottom: 1px solid var(--border-light);
+      transition: background 0.15s;
+    }
+
+    .ops-table tbody tr:last-child {
+      border-bottom: none;
+    }
+
+    .ops-table tbody tr:hover {
+      background: var(--surface);
+    }
+
+    .ops-table td {
+      padding: 0.6rem 1rem;
+      vertical-align: middle;
+    }
+
+    .ops-table td:first-child {
+      font-weight: 500;
+    }
+
+    .http-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      min-width: 42px;
+      text-align: center;
+    }
+
+    .http-badge.get {
+      background: var(--get-bg);
+      color: var(--get-green);
+    }
+
+    .http-badge.post {
+      background: var(--post-bg);
+      color: var(--post-blue);
+    }
+
+    .endpoint-path {
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+    }
+
+    .badge-req {
+      display: inline-block;
+      padding: 0.12rem 0.45rem;
+      border-radius: 4px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .badge-shall {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+
+    .badge-should {
+      background: #FFF8E1;
+      color: #EF6C00;
+    }
+
+    .badge-may {
+      background: #F3E5F5;
+      color: #7B1FA2;
+    }
+
+    .status-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 500;
+    }
+
+    .status-cell.impl {
+      color: #2E7D32;
+      font-weight: 600;
+    }
+
+    .status-cell.not {
+      color: var(--text-muted);
+    }
+
+    .status-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    /* ─── Packages ─── */
+    .packages-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .pkg-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      transition: border-color 0.2s;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .pkg-card:hover {
+      border-color: var(--ses-green);
+    }
+
+    .pkg-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .pkg-icon.ses {
+      background: linear-gradient(135deg, var(--ses-green) 0%, var(--ses-green-light) 100%);
+    }
+
+    .pkg-icon.hl7 {
+      background: linear-gradient(135deg, #1565C0 0%, #42A5F5 100%);
+    }
+
+    .pkg-icon.other {
+      background: linear-gradient(135deg, #6B7280 0%, #9CA3AF 100%);
+    }
+
+    .pkg-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pkg-name {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pkg-version {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 1px;
+    }
+
+    /* ─── RFC card ─── */
+    .rfc-card {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+    }
+
+    .rfc-card h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.6rem;
+    }
+
+    .rfc-card ul {
+      list-style: none;
+    }
+
+    .rfc-card li {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    .rfc-card li strong {
+      color: var(--text-primary);
+    }
+
+    /* ─── Footer ─── */
+    footer {
+      margin-top: auto;
+      text-align: center;
+      padding: 1.5rem 2rem;
+      border-top: 1px solid var(--border-light);
+      background: white;
+    }
+
+    footer p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 768px) {
+      .hero {
+        padding: 1.5rem 1.25rem;
+      }
+
+      .hero h1 {
+        font-size: 1.7rem;
+      }
+
+      .hero p {
+        font-size: 0.9rem;
+      }
+
+      .section {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
+
+      .playground-body {
+        padding: 1rem;
+      }
+
+      .toggle-row {
+        gap: 0.75rem;
+      }
+
+      .toggle-group button {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.75rem;
+      }
+
+      .form-row {
+        flex-direction: column;
+      }
+
+      .form-group {
+        min-width: 100%;
+      }
+
+      .dark-panel-body {
+        font-size: 0.68rem;
+        word-break: break-all;
+      }
+
+      .btn-run {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .ops-table-card {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .ops-table {
+        min-width: 580px;
+      }
+
+      .result-body {
+        font-size: 0.7rem;
+        max-height: 300px;
+      }
+
+      .section-header h2 {
+        font-size: 1.05rem;
+      }
+
+      footer {
+        padding: 1rem;
+      }
+    }
+
+    @media (max-width: 400px) {
+      .hero h1 {
+        font-size: 1.4rem;
+      }
+
+      .toggle-group button {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.7rem;
+      }
+
+      .dark-panel-body {
+        font-size: 0.62rem;
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SVG symbol definitions (DRY: defined once, used via <use>) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="icon-check" viewBox="0 0 20 20">
+      <path
+        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" />
+    </symbol>
+    <symbol id="icon-x" viewBox="0 0 20 20">
+      <path fill-rule="evenodd"
+        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+        clip-rule="evenodd" />
+    </symbol>
+    <symbol id="icon-code" viewBox="0 0 24 24">
+      <path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z" />
+    </symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24">
+      <path d="M8 5v14l11-7z" />
+    </symbol>
+  </svg>
+
+  <main>
+    <!-- Hero -->
+    <section class="hero">
+      <h1>Athena</h1>
+      <p>O servidor de terminologias FHIR mais rápido e simples do mundo!</p>
+      <a href="https://github.com/ti-sesgo/athena" target="_blank" rel="noopener"
+        style="display:inline-flex;align-items:center;gap:0.4rem;margin-top:0.75rem;padding:0.4rem 0.9rem;font-size:0.82rem;font-weight:500;color:var(--text-secondary);text-decoration:none;border:1px solid var(--border);border-radius:20px;transition:all 0.2s;"
+        onmouseover="this.style.borderColor='var(--ses-green)';this.style.color='var(--ses-green)'"
+        onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'"><svg width="18"
+          height="18" viewBox="0 0 16 16" fill="currentColor">
+          <path
+            d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+        </svg>GitHub</a>
+    </section>
+
+    <!-- Playground -->
+    <section class="section playground">
+      <div class="playground-card">
+        <div class="playground-header">
+          <h2>
+            <svg width="18" height="18" fill="white">
+              <use href="#icon-code" />
+            </svg>
+            Consultar Terminologia — $lookup
+          </h2>
+        </div>
+        <div class="playground-body">
+          <!-- Toggles -->
+          <div class="toggle-row">
+            <div>
+              <span class="toggle-label">Método</span>
+              <div class="toggle-group">
+                <button id="btn-get" class="active-get" onclick="setMethod('GET')">GET</button>
+                <button id="btn-post" onclick="setMethod('POST')">POST</button>
+              </div>
+            </div>
+            <div>
+              <span class="toggle-label">Formato da Resposta</span>
+              <div class="toggle-group">
+                <button id="btn-json" class="active-fmt" onclick="setFormat('json')">JSON</button>
+                <button id="btn-xml" onclick="setFormat('xml')">XML</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex:2;">
+              <label>System (URL do CodeSystem)</label>
+              <input type="text" id="input-system" value="http://www.saude.gov.br/fhir/r4/CodeSystem/BRCID10"
+                oninput="updatePreview()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Code</label>
+              <input type="text" id="input-code" value="A90" placeholder="Ex: A90" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+              <label>Version (opcional)</label>
+              <input type="text" id="input-version" placeholder="Ex: 1.0.0" oninput="updatePreview()">
+            </div>
+          </div>
+
+          <!-- Preview -->
+          <div class="dark-panel" id="preview-panel">
+            <div class="dark-panel-header"><span id="preview-label-text">REQUEST</span></div>
+            <div class="dark-panel-body" id="preview-content"></div>
+          </div>
+
+          <button class="btn-run" id="btn-run" onclick="executeLookup()">
+            <svg width="16" height="16" fill="currentColor">
+              <use href="#icon-play" />
+            </svg>
+            Executar
+          </button>
+
+          <!-- Result -->
+          <div class="result-panel" id="result-panel">
+            <div class="result-bar">
+              <div class="result-status">
+                <span class="dot" id="result-dot"></span>
+                <span id="result-status-text"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:1rem;">
+                <span id="result-timestamp" style="color:var(--dark-muted)"></span>
+                <span id="result-time" style="color:#A6E3A1;font-weight:600"></span>
+              </div>
+            </div>
+            <div class="result-body" id="result-body"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Operations Table (data-driven) -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Operações do Servidor de Terminologia</h2>
+        <p>Conformidade com <a href="https://hl7.org/fhir/R4/terminology-service.html" target="_blank">FHIR R4
+            Terminology Service</a></p>
+      </div>
+      <div class="ops-table-card">
+        <table class="ops-table">
+          <thead>
+            <tr>
+              <th>Operação</th>
+              <th>Método</th>
+              <th>Endpoint</th>
+              <th>Requisito</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="ops-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Packages -->
+    <section class="section">
+      <div class="section-header">
+        <h2>Packages Carregados</h2>
+        <p>Terminologias FHIR configuradas nesta instância</p>
+      </div>
+      <div class="packages-grid" id="pkg-grid"></div>
+    </section>
+
+    <!-- RFC -->
+    <section class="section" style="padding-bottom: 2rem;">
+      <div class="rfc-card">
+        <h3>Conformance Verbs (RFC 2119)</h3>
+        <ul>
+          <li><strong>SHALL</strong> — Requisito absoluto. Implementação deve suportar para estar em conformidade.</li>
+          <li><strong>SHOULD</strong> — Recomendado. Pode haver razões válidas para não implementar.</li>
+          <li><strong>MAY</strong> — Opcional. Pode ser incluído para melhorar o produto.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>
+      <strong>Athena</strong> — Servidor de Terminologias FHIR R4<br>
+      © 2025 Secretaria de Estado da Saúde de Goiás — SES-GO. Todos os direitos reservados.
+    </p>
+  </footer>
+
+  <script>
+    // ══════════════════════════════════════════════════════════
+    // Data definitions (DRY: single source of truth)
+    // ══════════════════════════════════════════════════════════
+
+    const OPERATIONS = [
+      ['Lookup', 'GET', '/CodeSystem/$lookup', 'SHALL', true],
+      ['Lookup', 'POST', '/CodeSystem/$lookup', 'SHALL', true],
+      ['Expand', 'GET', '/ValueSet/{id}/$expand', 'SHALL', false],
+      ['Expand', 'POST', '/ValueSet/$expand', 'SHALL', false],
+      ['Validate Code', 'GET', '/ValueSet/{id}/$validate-code', 'SHALL', false],
+      ['Validate Code', 'POST', '/ValueSet/$validate-code', 'SHALL', false],
+      ['Translate', 'GET', '/ConceptMap/$translate', 'SHALL', false],
+      ['Translate', 'POST', '/ConceptMap/$translate', 'SHALL', false],
+      ['Closure', 'POST', '/ConceptMap/$closure', 'SHOULD', false],
+      ['Read ValueSet', 'GET', '/ValueSet/{id}', 'SHALL', false],
+      ['Search ValueSet', 'GET', '/ValueSet?url=', 'SHALL', false],
+      ['Read ConceptMap', 'GET', '/ConceptMap/{id}', 'SHALL', false],
+      ['Search ConceptMap', 'GET', '/ConceptMap?url=', 'SHALL', false],
+      ['Capability Statement', 'GET', '/metadata', 'SHALL', true],
+      ['Read CodeSystem', 'GET', '/CodeSystem/{id}', 'MAY', true],
+      ['Search CodeSystem', 'GET', '/CodeSystem?url=', 'MAY', true],
+      ['Subsumes', 'GET', '/CodeSystem/$subsumes', 'MAY', false],
+      ['Subsumes', 'POST', '/CodeSystem/$subsumes', 'MAY', false],
+      ['Batch Operations', 'POST', '/', 'MAY', false],
+    ];
+
+    const PACKAGES = [
+      { name: 'br.go.ses.reds-go', version: '1.0.0' },
+      { name: 'br.go.ses.core', version: '1.1.0' },
+      { name: 'br.go.ses.seguranca', version: '0.1.2' },
+      { name: 'br.go.ses.medicamentos', version: '1.0.0' },
+      { name: 'br.go.ses.exame', version: '1.0.0' },
+      { name: 'hl7.terminology.r4', version: '6.5.0' },
+      { name: 'hl7.fhir.uv.extensions.r4', version: '5.2.0' },
+      { name: 'hl7.fhir.uv.tools.r4', version: '0.7.1' },
+      { name: 'hl7.fhir.r4.core', version: '4.0.1' },
+    ];
+
+    const STATUS_CODES = { 200: 'OK', 400: 'Bad Request', 404: 'Not Found', 406: 'Not Acceptable', 500: 'Internal Server Error' };
+
+    // ══════════════════════════════════════════════════════════
+    // Render data-driven sections
+    // ══════════════════════════════════════════════════════════
+
+    function renderOperations() {
+      const tbody = document.getElementById('ops-tbody');
+      tbody.innerHTML = OPERATIONS.map(([name, method, endpoint, req, impl]) => {
+        const methodClass = method.toLowerCase();
+        const reqClass = req.toLowerCase();
+        const statusClass = impl ? 'impl' : 'not';
+        const icon = impl
+          ? '<svg class="status-icon" fill="#2E7D32"><use href="#icon-check"/></svg>'
+          : '<svg class="status-icon" fill="#9CA3AF"><use href="#icon-x"/></svg>';
+        const label = impl ? 'Implementado' : 'Não implementado';
+        return `<tr>
+          <td>${esc(name)}</td>
+          <td><span class="http-badge ${methodClass}">${method}</span></td>
+          <td class="endpoint-path">${esc(endpoint)}</td>
+          <td><span class="badge-req badge-${reqClass}">${req}</span></td>
+          <td><div class="status-cell ${statusClass}">${icon} ${label}</div></td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderPackages() {
+      const grid = document.getElementById('pkg-grid');
+      grid.innerHTML = PACKAGES.map(pkg => {
+        const iconClass = pkg.name.startsWith('br.go.ses') ? 'ses'
+          : pkg.name.startsWith('hl7.') ? 'hl7' : 'other';
+        const iconLabel = pkg.name.startsWith('br.go.ses') ? 'SES'
+          : pkg.name.startsWith('hl7.') ? 'HL7' : 'PKG';
+        const registryUrl = 'https://registry.fhir.org/package/' + encodeURIComponent(pkg.name + '|' + pkg.version);
+        return `<a class="pkg-card" href="${registryUrl}" target="_blank" rel="noopener">
+          <div class="pkg-icon ${iconClass}">${iconLabel}</div>
+          <div class="pkg-info">
+            <div class="pkg-name">${esc(pkg.name)}</div>
+            <div class="pkg-version">v${esc(pkg.version)}</div>
+          </div>
+        </a>`;
+      }).join('');
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Playground logic
+    // ══════════════════════════════════════════════════════════
+
+    const BASE = window.location.origin + window.location.pathname.replace(/\/$/, '');
+    let currentMethod = 'GET';
+    let currentFormat = 'json';
+
+    function setMethod(method) {
+      currentMethod = method;
+      document.getElementById('btn-get').className = method === 'GET' ? 'active-get' : '';
+      document.getElementById('btn-post').className = method === 'POST' ? 'active-post' : '';
+      updatePreview();
+    }
+
+    function setFormat(fmt) {
+      currentFormat = fmt;
+      document.getElementById('btn-json').className = fmt === 'json' ? 'active-fmt' : '';
+      document.getElementById('btn-xml').className = fmt === 'xml' ? 'active-fmt' : '';
+      updatePreview();
+    }
+
+    function getFormValues() {
+      return {
+        system: document.getElementById('input-system').value.trim(),
+        code: document.getElementById('input-code').value.trim(),
+        version: document.getElementById('input-version').value.trim()
+      };
+    }
+
+    function getAcceptHeader() {
+      return currentFormat === 'json' ? 'application/fhir+json' : 'application/fhir+xml';
+    }
+
+    function buildReadableUrl(system, code, version) {
+      let url = BASE + '/CodeSystem/$lookup?system=' + system + '&code=' + code;
+      if (version) url += '&version=' + version;
+      return url + '&_format=' + currentFormat;
+    }
+
+    function buildPostPayload(system, code, version) {
+      const params = [];
+      if (system) params.push({ name: 'system', valueUri: system });
+      if (code) params.push({ name: 'code', valueCode: code });
+      if (version) params.push({ name: 'version', valueString: version });
+      return { resourceType: 'Parameters', parameter: params };
+    }
+
+    function updatePreview() {
+      const vals = getFormValues();
+      const labelEl = document.getElementById('preview-label-text');
+      const contentEl = document.getElementById('preview-content');
+
+      const acceptLine = '<span style="color:var(--dark-muted)">Accept: ' + getAcceptHeader() + '</span>';
+
+      if (currentMethod === 'GET') {
+        labelEl.textContent = 'GET REQUEST';
+        contentEl.innerHTML = '<span class="preview-method-get">GET</span> <span class="preview-url">' + esc(buildReadableUrl(vals.system, vals.code, vals.version)) + '</span>\n' + acceptLine;
+      } else {
+        labelEl.textContent = 'POST REQUEST';
+        const postUrl = BASE + '/CodeSystem/$lookup?_format=' + currentFormat;
+        const payload = buildPostPayload(vals.system, vals.code, vals.version);
+        let preview = '<span class="preview-method-post">POST</span> <span class="preview-url">' + esc(postUrl) + '</span>\n';
+        preview += '<span style="color:var(--dark-muted)">Content-Type: application/fhir+json</span>\n';
+        preview += acceptLine + '\n\n';
+        preview += highlightJson(JSON.stringify(payload, null, 2));
+        contentEl.innerHTML = preview;
+      }
+    }
+
+    async function executeLookup() {
+      const vals = getFormValues();
+      const btn = document.getElementById('btn-run');
+      const els = {
+        panel: document.getElementById('result-panel'),
+        body: document.getElementById('result-body'),
+        dot: document.getElementById('result-dot'),
+        status: document.getElementById('result-status-text'),
+        time: document.getElementById('result-time'),
+        timestamp: document.getElementById('result-timestamp')
+      };
+
+      if (!vals.system || !vals.code) {
+        showResult(els, 400, 'Preencha system e code.', 0, true);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Executando...';
+
+      const t0 = performance.now();
+      try {
+        let response;
+        if (currentMethod === 'GET') {
+          const params = new URLSearchParams({ system: vals.system, code: vals.code, _format: currentFormat });
+          if (vals.version) params.append('version', vals.version);
+          response = await fetch(BASE + '/CodeSystem/$lookup?' + params.toString(), {
+            headers: { 'Accept': getAcceptHeader() }
+          });
+        } else {
+          response = await fetch(BASE + '/CodeSystem/$lookup?_format=' + currentFormat, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/fhir+json', 'Accept': getAcceptHeader() },
+            body: JSON.stringify(buildPostPayload(vals.system, vals.code, vals.version))
+          });
+        }
+        const elapsed = Math.round(performance.now() - t0);
+        const ct = response.headers.get('content-type') || '';
+        const data = ct.includes('xml') ? await response.text() : await response.json();
+        showResult(els, response.status, data, elapsed, !response.ok);
+      } catch (err) {
+        showResult(els, 0, { error: err.message }, Math.round(performance.now() - t0), true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" fill="currentColor"><use href="#icon-play"/></svg> Executar';
+      }
+    }
+
+    function showResult(els, status, data, elapsed, isError) {
+      els.panel.classList.add('visible');
+      els.dot.className = 'dot ' + (isError ? 'error' : 'success');
+      els.status.textContent = status ? status + ' ' + (STATUS_CODES[status] || '') : 'Erro de Rede';
+      els.time.textContent = '⚡ ' + elapsed + 'ms';
+      els.time.style.color = elapsed < 200 ? '#A6E3A1' : elapsed < 1000 ? '#F9E2AF' : '#F38BA8';
+      els.timestamp.textContent = new Date().toLocaleTimeString('pt-BR');
+      els.body.innerHTML = typeof data === 'string' ? highlightXml(esc(data)) : highlightJson(JSON.stringify(data, null, 2));
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Utility functions
+    // ══════════════════════════════════════════════════════════
+
+    function esc(s) {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function highlightJson(json) {
+      return esc(json).replace(
+        /("(\\u[\da-fA-F]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?|\bnull\b)/g,
+        m => {
+          let c = 'hl-num';
+          if (/^"/.test(m)) c = /:$/.test(m) ? 'hl-key' : 'hl-str';
+          else if (/true|false/.test(m)) c = 'hl-bool';
+          else if (/null/.test(m)) c = 'hl-null';
+          return '<span class="' + c + '">' + m + '</span>';
+        }
+      );
+    }
+
+    function highlightXml(xml) {
+      return formatXml(xml)
+        .replace(/(&lt;\/?)([\w:-]+)/g, '$1<span class="hl-key">$2</span>')
+        .replace(/([\w:-]+)(=)(&quot;[^&]*&quot;)/g, '<span class="hl-bool">$1</span>$2<span class="hl-str">$3</span>')
+        .replace(/(&gt;)([^&\s<][^&<]*)(&lt;)/g, '$1<span class="hl-str">$2</span>$3');
+    }
+
+    function formatXml(xml) {
+      let out = '', indent = 0;
+      xml.split(/(&lt;\/?[^&]*?&gt;)/g).filter(Boolean).forEach(part => {
+        if (part.match(/^&lt;\//)) { indent--; out += '  '.repeat(Math.max(indent, 0)) + part + '\n'; }
+        else if (part.match(/^&lt;/) && !part.match(/\/&gt;$/)) { out += '  '.repeat(indent) + part + '\n'; indent++; }
+        else if (part.match(/\/&gt;$/)) { out += '  '.repeat(indent) + part + '\n'; }
+        else { const t = part.trim(); if (t) out = out.trimEnd() + t + '\n'; }
+      });
+      return out.trimEnd();
+    }
+
+    // ══════════════════════════════════════════════════════════
+    // Init
+    // ══════════════════════════════════════════════════════════
+
+    renderOperations();
+    renderPackages();
+    updatePreview();
+    document.querySelectorAll('#input-system, #input-code, #input-version').forEach(el => {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') executeLookup(); });
+    });
+  </script>
+
+</body>
+
+</html>
