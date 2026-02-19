@@ -8,6 +8,8 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
+import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.CodeType;
 import org.springframework.http.ResponseEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -359,5 +361,97 @@ class CodeSystemControllerTest {
 
                 // Assert
                 assertEquals(400, response.getStatusCode().value());
+        }
+
+        @Test
+        void shouldPerformLookupViaPostWithIndividualParameters() {
+                // Arrange — POST with system/code/version as individual Parameters (not Coding)
+                String system = "http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO";
+                String code = "225125";
+                String display = "Médico clínico";
+                String csName = "CBO";
+                String csVersion = "2.0";
+
+                ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
+                when(projection.getDisplay()).thenReturn(display);
+                when(projection.getCodeSystemName()).thenReturn(csName);
+                when(projection.getCodeSystemVersion()).thenReturn(csVersion);
+
+                when(codeSystemService.findConcept(system, code)).thenReturn(Optional.of(projection));
+
+                Parameters parameters = new Parameters();
+                parameters.addParameter("system", new UriType(system));
+                parameters.addParameter("code", new CodeType(code));
+
+                // Act
+                ResponseEntity<IBaseResource> response = controller.lookup(parameters);
+
+                // Assert
+                assertEquals(200, response.getStatusCode().value());
+                Parameters resultParams = (Parameters) response.getBody();
+                assertNotNull(resultParams);
+                assertEquals(display, ((StringType) resultParams.getParameter("display").getValue()).getValue());
+                assertEquals(csName, ((StringType) resultParams.getParameter("name").getValue()).getValue());
+        }
+
+        @Test
+        void shouldNotLeakUriTypeInDiagnosticsWhenPostNotFound() {
+                // Arrange — ensures primitiveValue() is used, not toString()
+                String system = "http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO";
+                String code = "INVALID";
+
+                when(codeSystemService.findConcept(system, code)).thenReturn(Optional.empty());
+
+                Parameters parameters = new Parameters();
+                parameters.addParameter("system", new UriType(system));
+                parameters.addParameter("code", new CodeType(code));
+
+                // Act
+                ResponseEntity<IBaseResource> response = controller.lookup(parameters);
+
+                // Assert
+                assertEquals(404, response.getStatusCode().value());
+                OperationOutcome outcome = (OperationOutcome) response.getBody();
+                assertNotNull(outcome);
+
+                String diagnostic = outcome.getIssueFirstRep().getDiagnostics();
+                // Must contain raw system URL, never UriType[...] wrapper
+                assertTrue(diagnostic.contains("system[" + system + "]"),
+                                "Diagnostic should contain raw system URL, got: " + diagnostic);
+                assertFalse(diagnostic.contains("UriType"),
+                                "Diagnostic must not contain UriType wrapper, got: " + diagnostic);
+                assertTrue(diagnostic.contains("code[" + code + "]"));
+        }
+
+        @Test
+        void shouldPerformLookupViaPostWithIndividualParametersAndVersion() {
+                // Arrange
+                String system = "http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO";
+                String code = "225125";
+                String version = "2.0";
+                String display = "Médico clínico";
+                String csName = "CBO";
+
+                ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
+                when(projection.getDisplay()).thenReturn(display);
+                when(projection.getCodeSystemName()).thenReturn(csName);
+                when(projection.getCodeSystemVersion()).thenReturn(version);
+
+                when(codeSystemService.findConcept(system, code, version)).thenReturn(Optional.of(projection));
+
+                Parameters parameters = new Parameters();
+                parameters.addParameter("system", new UriType(system));
+                parameters.addParameter("code", new CodeType(code));
+                parameters.addParameter("version", new StringType(version));
+
+                // Act
+                ResponseEntity<IBaseResource> response = controller.lookup(parameters);
+
+                // Assert
+                assertEquals(200, response.getStatusCode().value());
+                Parameters resultParams = (Parameters) response.getBody();
+                assertNotNull(resultParams);
+                assertEquals(display, ((StringType) resultParams.getParameter("display").getValue()).getValue());
+                assertEquals(version, ((StringType) resultParams.getParameter("version").getValue()).getValue());
         }
 }

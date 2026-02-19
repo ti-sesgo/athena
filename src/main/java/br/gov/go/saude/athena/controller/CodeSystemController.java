@@ -141,9 +141,9 @@ public class CodeSystemController {
         Parameters.ParametersParameterComponent versionParam = parameters.getParameter("version");
 
         if (codeParam != null && systemParam != null) {
-            String code = codeParam.getValue().toString();
-            String system = systemParam.getValue().toString();
-            String version = versionParam != null ? versionParam.getValue().toString() : null;
+            String code = codeParam.getValue().primitiveValue();
+            String system = systemParam.getValue().primitiveValue();
+            String version = versionParam != null ? versionParam.getValue().primitiveValue() : null;
             return Optional.of(new LookupCriteria(system, code, version));
         }
 
