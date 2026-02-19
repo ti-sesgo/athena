@@ -22,7 +22,7 @@ class ContentNegotiationTest {
     void shouldReturnJsonByDefault() throws Exception {
         mockMvc.perform(get("/fhir/metadata"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+json"));
+                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"));
     }
 
     @Test
@@ -30,7 +30,7 @@ class ContentNegotiationTest {
         mockMvc.perform(get("/fhir/metadata")
                 .accept("application/fhir+json"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+json"));
+                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"));
     }
 
     @Test
@@ -38,21 +38,21 @@ class ContentNegotiationTest {
         mockMvc.perform(get("/fhir/metadata")
                 .accept("application/fhir+xml"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+xml"));
+                .andExpect(content().contentType("application/fhir+xml;charset=UTF-8"));
     }
 
     @Test
     void shouldReturnJsonWhenRequestedViaFormatParameter() throws Exception {
         mockMvc.perform(get("/fhir/metadata?_format=json"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+json"));
+                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"));
     }
 
     @Test
     void shouldReturnXmlWhenRequestedViaFormatParameter() throws Exception {
         mockMvc.perform(get("/fhir/metadata?_format=xml"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+xml"));
+                .andExpect(content().contentType("application/fhir+xml;charset=UTF-8"));
     }
 
     @Test
@@ -60,42 +60,42 @@ class ContentNegotiationTest {
         mockMvc.perform(get("/fhir/metadata?_format=json")
                 .accept("application/fhir+xml"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+json"));
+                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"));
     }
 
     @Test
     void shouldReturnXmlWhenRequestedViaFormatParameterRelateXml() throws Exception {
         mockMvc.perform(get("/fhir/metadata?_format=application/xml"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+xml"));
+                .andExpect(content().contentType("application/fhir+xml;charset=UTF-8"));
     }
 
     @Test
     void shouldReturnXmlWhenRequestedViaFormatParameterTextXml() throws Exception {
         mockMvc.perform(get("/fhir/metadata?_format=text/xml"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+xml"));
+                .andExpect(content().contentType("application/fhir+xml;charset=UTF-8"));
     }
 
     @Test
     void shouldReturnXmlWhenRequestedViaFormatParameterApplicationFhirXml() throws Exception {
         mockMvc.perform(get("/fhir/metadata?_format=application/fhir+xml"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+xml"));
+                .andExpect(content().contentType("application/fhir+xml;charset=UTF-8"));
     }
 
     @Test
     void shouldReturnJsonWhenRequestedViaFormatParameterApplicationJson() throws Exception {
         mockMvc.perform(get("/fhir/metadata?_format=application/json"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+json"));
+                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"));
     }
 
     @Test
     void shouldReturnJsonWhenRequestedViaFormatParameterApplicationFhirJson() throws Exception {
         mockMvc.perform(get("/fhir/metadata?_format=application/fhir+json"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("application/fhir+json"));
+                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"));
     }
 
     @Test
@@ -109,7 +109,7 @@ class ContentNegotiationTest {
         mockMvc.perform(get("/fhir/metadata")
                 .accept("text/json"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("text/json"));
+                .andExpect(content().contentType("text/json;charset=UTF-8"));
     }
 
     @Test
@@ -117,7 +117,7 @@ class ContentNegotiationTest {
         mockMvc.perform(get("/fhir/metadata")
                 .accept("text/xml"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType("text/xml"));
+                .andExpect(content().contentType("text/xml;charset=UTF-8"));
     }
 
     // Since we are strictly supporting FHIR formats, other formats might not be
@@ -141,6 +141,6 @@ class ContentNegotiationTest {
         mockMvc.perform(get("/fhir/non-existent-resource")
                 .accept(MediaType.TEXT_HTML))
                 .andExpect(status().isNotFound())
-                .andExpect(content().contentType("application/fhir+json"));
+                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"));
     }
 }

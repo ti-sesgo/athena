@@ -69,6 +69,9 @@ public class FhirHttpMessageConverter extends AbstractHttpMessageConverter<IBase
             parser.setPrettyPrint(true);
         }
 
+       outputMessage.getHeaders().setContentType(
+               new MediaType(contentType.getType(), contentType.getSubtype(), StandardCharsets.UTF_8)
+       );
         try (OutputStreamWriter writer = new OutputStreamWriter(outputMessage.getBody(), StandardCharsets.UTF_8)) {
             parser.encodeResourceToWriter(resource, writer);
         }

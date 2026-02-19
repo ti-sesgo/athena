@@ -29,7 +29,7 @@ class CapabilityStatementControllerTest {
                 mockMvc.perform(get("/fhir/metadata")
                                 .accept("application/fhir+json"))
                                 .andExpect(status().isOk())
-                                .andExpect(content().contentType("application/fhir+json"))
+                                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"))
                                 .andExpect(jsonPath("$.resourceType").value("CapabilityStatement"));
         }
 
