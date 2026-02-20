@@ -1,5 +1,9 @@
 server:
   port: 8085
+  # Lê cabeçalhos 'X-Forwarded-*' (como IP original e protocolo) enviados por um proxy/load balancer.
+  # QUANDO NÃO USAR: Nunca use se o app estiver exposto DIRETAMENTE à internet sem um proxy confiável na frente.
+  # Clientes maliciosos podem forjar esses cabeçalhos (ex: fingindo um IP interno) e burlar seguranças.
+  forward-headers-strategy: framework
 
 spring:
   application:
