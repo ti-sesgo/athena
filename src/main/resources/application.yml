@@ -67,6 +67,10 @@ management:
     metrics:
       export:
         enabled: true
+  metrics:
+    tags:
+      application: athena
+      instance: ${HOSTNAME:unknown}
   endpoints:
     web:
       exposure:
