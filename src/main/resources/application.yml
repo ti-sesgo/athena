@@ -62,7 +62,7 @@ logging:
 
 management:
   server:
-    port: 9090
+    port: 9095
   prometheus:
     metrics:
       export:
