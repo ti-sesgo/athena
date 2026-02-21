@@ -28,8 +28,7 @@ public class CodeSystemController {
      * <br>
      * URL: /CodeSystem/{id}
      */
-    @GetMapping(value = "/{id}", produces = { "application/fhir+json", "application/json", "application/fhir+xml",
-            "application/xml" })
+    @GetMapping(value = "/{id}")
     public ResponseEntity<IBaseResource> getCodeSystemById(@PathVariable String id) {
         log.debug("Get CodeSystem by ID: {}", id);
 
@@ -45,7 +44,7 @@ public class CodeSystemController {
      * <br>
      * URL: /CodeSystem?url={url}
      */
-    @GetMapping(produces = { "application/fhir+json", "application/json", "application/fhir+xml", "application/xml" })
+    @GetMapping
     public ResponseEntity<IBaseResource> getCodeSystemByUrl(@RequestParam(required = false) String url) {
         if (url == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'url' is required for search.");
@@ -95,8 +94,7 @@ public class CodeSystemController {
      *                   ou os campos code e system.
      * @return Detalhes do conceito em formato Parameters.
      */
-    @PostMapping(value = "/$lookup", produces = { "application/fhir+json", "application/json", "application/fhir+xml",
-            "application/xml" })
+    @PostMapping(value = "/$lookup")
     public ResponseEntity<IBaseResource> lookup(@RequestBody Parameters parameters) {
         if (parameters == null) {
             return buildLookupBadRequestError();
@@ -112,8 +110,7 @@ public class CodeSystemController {
      * <br>
      * GET /CodeSystem/$lookup?system={system}&code={code}&version={version}
      */
-    @GetMapping(value = "/$lookup", produces = { "application/fhir+json", "application/json", "application/fhir+xml",
-            "application/xml" })
+    @GetMapping(value = "/$lookup")
     public ResponseEntity<IBaseResource> lookup(@RequestParam(required = false) String system,
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String version) {
