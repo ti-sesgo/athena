@@ -14,7 +14,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CodeSystemService {
+public class  CodeSystemService {
 
     private final CodeSystemRepository codeSystemRepository;
     private final ConceptRepository conceptRepository;
@@ -42,7 +42,7 @@ public class CodeSystemService {
      * Busca um CodeSystem pelo ID lógico ou ID interno.
      */
     public Optional<CodeSystemEntity> findById(String id) {
-        return codeSystemRepository.findByResourceIdAndIsLatestTrue(id)
+        return codeSystemRepository.findByResourceIdAndIsLatestTrueAndActiveTrue(id)
                 .or(() -> codeSystemRepository.findById(tryParseId(id)));
     }
 
@@ -50,21 +50,22 @@ public class CodeSystemService {
      * Busca um CodeSystem pela URL canônica.
      */
     public Optional<CodeSystemEntity> findByUrl(String url) {
-        return codeSystemRepository.findByUrlAndIsLatestTrue(url);
+        return codeSystemRepository.findByUrlAndIsLatestTrueAndActiveTrue(url);
     }
 
     /**
      * Busca conceito por sistema e código (versão mais recente/aleatória ativa).
      */
     public Optional<ConceptDisplayProjection> findConcept(String system, String code) {
-        return conceptRepository.findDisplayBySystemAndCodeAndActiveTrue(system, code);
+        return conceptRepository.findDisplayByCodeSystemUrlAndCodeAndCodeSystemIsLatestTrueAndActiveTrue(system, code);
     }
 
     /**
      * Busca conceito por sistema, código e versão.
      */
     public Optional<ConceptDisplayProjection> findConcept(String system, String code, String version) {
-        return conceptRepository.findDisplayBySystemAndCodeAndVersionAndActiveTrue(system, code, version);
+        return conceptRepository.findDisplayByCodeSystemUrlAndCodeAndCodeSystemVersionAndActiveTrue(system, code,
+                version);
     }
 
     private Long tryParseId(String id) {

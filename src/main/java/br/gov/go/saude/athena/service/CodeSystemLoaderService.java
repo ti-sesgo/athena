@@ -7,6 +7,8 @@ import br.gov.go.saude.athena.loader.ExtractedResource;
 import br.gov.go.saude.athena.loader.ResourceExtractor;
 import br.gov.go.saude.athena.repository.CodeSystemRepository;
 import br.gov.go.saude.athena.repository.ConceptRepository;
+import lombok.Builder;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
@@ -92,7 +94,7 @@ public class CodeSystemLoaderService {
         logSummary(results, pkg);
     }
 
-    private LoadResult loadCodeSystem(ExtractedResource extracted, PackageEntity pkgEntity) throws Exception {
+    private LoadResult loadCodeSystem(ExtractedResource extracted, PackageEntity pkgEntity) {
         CodeSystem codeSystem = (CodeSystem) extracted.resource();
 
         String resourceId = codeSystem.getIdElement().getIdPart();
@@ -100,7 +102,7 @@ public class CodeSystemLoaderService {
         String version = codeSystem.getVersion();
 
         // Verifica se já existe
-        if (codeSystemRepository.findByUrlAndVersion(url, version).isPresent()) {
+        if (codeSystemRepository.findByUrlAndVersionAndActiveTrue(url, version).isPresent()) {
             return LoadResult.builder()
                     .url(url)
                     .version(version)
@@ -111,10 +113,10 @@ public class CodeSystemLoaderService {
 
         /*
          * TODO: melhoroar implementação. É uma tarefa difícl identificar a última
-         * versão.
+         * versão. Possivelmente pela data de publicação do pacote no package.json
          */
         // Determina se é a versão mais recente
-        boolean isLatest = codeSystemRepository.findLatestByUrl(url).isEmpty();
+        boolean isLatest = codeSystemRepository.findByUrlAndIsLatestTrueAndActiveTrue(url).isEmpty();
 
         // Usa status de publicação FHIR
         PublicationStatus status = codeSystem.getStatus() != null ? codeSystem.getStatus() : PublicationStatus.NULL;
@@ -175,17 +177,17 @@ public class CodeSystemLoaderService {
         // Fallback: title > name > url (CodeSystem name é obrigatório)
         String csName = codeSystem.hasTitle() ? codeSystem.getTitle()
                 : (codeSystem.hasName() ? codeSystem.getName() : codeSystem.getUrl());
-        String csVersion = codeSystem.getVersion();
 
         ConceptEntity conceptEntity = ConceptEntity.builder()
-                .system(codeSystem.getUrl())
-                .version(codeSystem.getVersion())
+                .codeSystemUrl(codeSystem.getUrl())
                 .code(concept.getCode())
                 .display(concept.getDisplay())
                 .definition(concept.getDefinition())
                 .codeSystemName(csName)
-                .codeSystemVersion(csVersion)
+                .codeSystemVersion(codeSystem.getVersion())
                 .codeSystem(csEntity)
+                .codeSystemIsLatest(csEntity.getIsLatest())
+                // TODO: permityir configuração para desativar CodeSystem quando forem status=draft
                 .active(true)
                 .build();
 
@@ -250,8 +252,8 @@ public class CodeSystemLoaderService {
         log.info(sb.toString());
     }
 
-    @lombok.Builder
-    @lombok.Getter
+    @Builder
+    @Getter
     private static class LoadResult {
         String url;
         String version;

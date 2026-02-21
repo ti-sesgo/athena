@@ -1,15 +1,12 @@
 package br.gov.go.saude.athena.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 
 /**
  * Representa um CodeSystem FHIR armazenado.
- * 
+ *
  * <p>
  * Separação de IDs:
  * <ul>
@@ -18,18 +15,27 @@ import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
  * </ul>
  */
 @Entity
-@Table(name = "code_systems", schema = "terminology", indexes = {
-        @Index(name = "idx_cs_url", columnList = "url"),
-        @Index(name = "idx_cs_url_version", columnList = "url, version"),
-        @Index(name = "idx_cs_url_latest", columnList = "url, isLatest"),
-        @Index(name = "idx_cs_status", columnList = "status"),
-        @Index(name = "idx_cs_resource_id", columnList = "resourceId")
-})
-@Data
+@Table(
+        name = "code_systems",
+        schema = "terminology",
+        // TODO: CodeSystem.content = #fragment quebram essa lógica
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_cs_url_version",
+                        columnNames = {"url", "version"})
+        },
+        indexes = {
+                @Index(name = "idx_cs_resource_id_active", columnList = "resource_id, active"),
+                @Index(name="idx_cs_url_active_version", columnList="url, active, version"),
+                @Index(name="idx_cs_url_active_is_latest", columnList="url, active, is_latest")
+        }
+)
+@Getter
+@Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
 public class CodeSystemEntity {
+
+    public CodeSystemEntity() {}
 
     /**
      * ID interno do banco (surrogate key).
@@ -67,7 +73,6 @@ public class CodeSystemEntity {
 
     /**
      * Status de publicação FHIR.
-     * Usa enum do HAPI FHIR diretamente.
      */
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -89,4 +94,8 @@ public class CodeSystemEntity {
     @Column(nullable = false)
     @Builder.Default
     private Boolean isLatest = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean active = true;
 }

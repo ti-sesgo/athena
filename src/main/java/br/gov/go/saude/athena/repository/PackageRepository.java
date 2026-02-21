@@ -8,8 +8,6 @@ import java.util.Optional;
 
 @Repository
 public interface PackageRepository extends JpaRepository<PackageEntity, Long> {
-    
-    Optional<PackageEntity> findByPackageIdAndVersion(String packageId, String version);
-    
-    Optional<PackageEntity> findFirstByPackageIdAndActiveOrderByVersionDesc(String packageId, Boolean active);
+
+    Optional<PackageEntity> findByPackageIdAndVersionAndActiveTrue(String packageId, String version);
 }

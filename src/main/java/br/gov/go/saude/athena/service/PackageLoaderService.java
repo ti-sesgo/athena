@@ -8,6 +8,8 @@ import br.gov.go.saude.athena.loader.RegistryPackageSource;
 import br.gov.go.saude.athena.repository.PackageRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -65,16 +67,16 @@ public class PackageLoaderService {
         PackageSource source = createPackageSource(packageRef);
 
         // Verifica se já está carregado
-        if (packageRepository.findByPackageIdAndVersion(source.getPackageId(), source.getVersion()).isPresent()) {
+        if (packageRepository.findByPackageIdAndVersionAndActiveTrue(source.getPackageId(), source.getVersion()).isPresent()) {
             log.info("Package {}:{} já carregado, pulando", source.getPackageId(), source.getVersion());
             return source;
         }
 
-        log.info("Salvando package: {}:{}", source.getPackageId(), source.getVersion());
+        log.info("Tentando criar registro do package: {}:{}", source.getPackageId(), source.getVersion());
 
         String registryUrl = String.format("%s/%s/%s", athenaProperties.getRegistryUrl(), source.getPackageId(),
                 source.getVersion());
-        // Salva metadados do package
+
         PackageEntity pkg = PackageEntity.builder()
                 .packageId(source.getPackageId())
                 .version(source.getVersion())
@@ -83,15 +85,36 @@ public class PackageLoaderService {
                 .active(true)
                 .build();
 
-        pkg = packageRepository.save(pkg);
+        try {
+            pkg = packageRepository.save(pkg);
+            // Em algumas configuraçoes, o insert físico não ocorre até o flush.
+            // Para garantir a detecção do conflito imediatamente, disparamos o flush:
+            packageRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            // Se cairmos aqui, significa que o Container A inseriu milissegundos antes,
+            // e Container B tomou a exclusão de Constraint do JPA para Packages.
+            // Consequentemente, encerramos imediatamente. NEM tentamos recuperar
+            // CodeSystems.
+            log.info(
+                    "Package {}:{} já está sendo carregado por outra instância (DataIntegrityViolationException interceptada). Abortando processamento nesta instância.",
+                    source.getPackageId(), source.getVersion());
+            return source;
+        }
 
         // Carrega conteúdo do package
         byte[] packageBytes = source.load();
 
         // Processa CodeSystems de forma concorrente
-        codeSystemLoaderService.loadCodeSystems(packageBytes, pkg);
+        try {
+            codeSystemLoaderService.loadCodeSystems(packageBytes, pkg);
+        } catch (DataIntegrityViolationException e) {
+            // Apenas como fallback extremamente improvável/impossível devido a atomicidade do banco
+            log.info(
+                    "CodeSystems do package {}:{} já foram/estão sendo carregados por outra instância (DataIntegrityViolationException)",
+                    source.getPackageId(), source.getVersion());
+        }
 
-        log.info("Package {}:{} carregado com sucesso", source.getPackageId(), source.getVersion());
+        log.info("Processamento do package {}:{} finalizado", source.getPackageId(), source.getVersion());
         return source;
     }
 

@@ -1,10 +1,7 @@
 package br.gov.go.saude.athena.domain;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -12,18 +9,29 @@ import java.time.LocalDateTime;
  * Representa um package FHIR carregado no servidor.
  */
 @Entity
-@Table(name = "packages", schema = "terminology")
-@Data
+@Table(
+        name = "packages",
+        schema = "terminology",
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"package_id", "version"})},
+
+        indexes = {
+                @Index(name = "idx_package_id_version",
+                        columnList = "package_id, version, active")
+        }
+)
+@Getter
+@Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
 public class PackageEntity {
+
+    public PackageEntity() {}
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String packageId;
 
     @Column(nullable = false)
