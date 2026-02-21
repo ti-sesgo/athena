@@ -1,6 +1,6 @@
 package br.gov.go.saude.athena.controller;
 
-import br.gov.go.saude.athena.repository.ConceptDisplayProjection;
+import br.gov.go.saude.athena.repository.ConceptProjection;
 import br.gov.go.saude.athena.service.CodeSystemService;
 
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -150,7 +150,7 @@ public class CodeSystemController {
     private ResponseEntity<IBaseResource> processLookup(LookupCriteria criteria) {
         log.debug("Processing lookup for criteria: {}", criteria);
 
-        Optional<ConceptDisplayProjection> result;
+        Optional<ConceptProjection> result;
         if (criteria.version() != null && !criteria.version().isEmpty()) {
             result = codeSystemService.findConcept(criteria.system(), criteria.code(), criteria.version());
         } else {
@@ -172,7 +172,7 @@ public class CodeSystemController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(outcome);
     }
 
-    private ResponseEntity<IBaseResource> buildLookupResponse(Optional<ConceptDisplayProjection> projection,
+    private ResponseEntity<IBaseResource> buildLookupResponse(Optional<ConceptProjection> projection,
             LookupCriteria criteria) {
         if (projection.isEmpty()) {
             String diagnostic = "Unable to find code[" + criteria.code() + "] in system[" + criteria.system() + "]";
@@ -190,7 +190,7 @@ public class CodeSystemController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outcome);
         }
 
-        ConceptDisplayProjection p = projection.get();
+        ConceptProjection p = projection.get();
 
         // Monta o retorno Parameters conforme spec FHIR
         Parameters parameters = new Parameters();

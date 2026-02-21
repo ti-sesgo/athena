@@ -5,7 +5,6 @@ import lombok.*;
 
 /**
  * Representa um conceito (código) de um CodeSystem.
- * Otimizado para operação $lookup com índice composto em (system, code).
  */
 @Entity
 @Table(
@@ -18,7 +17,7 @@ import lombok.*;
         indexes = {
                 @Index(name = "idx_concept_lookup_version",
                         columnList = "code_system_url, code, active, code_system_version"),
-                @Index(name = "idx_concept_lookup_is_latesst",
+                @Index(name = "idx_concept_lookup_is_latest",
                         columnList = "code_system_url, code, active, code_system_is_latest")
         }
 )

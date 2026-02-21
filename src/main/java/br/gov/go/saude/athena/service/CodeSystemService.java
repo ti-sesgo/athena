@@ -2,7 +2,7 @@ package br.gov.go.saude.athena.service;
 
 import br.gov.go.saude.athena.domain.CodeSystemEntity;
 import br.gov.go.saude.athena.repository.CodeSystemRepository;
-import br.gov.go.saude.athena.repository.ConceptDisplayProjection;
+import br.gov.go.saude.athena.repository.ConceptProjection;
 import br.gov.go.saude.athena.repository.ConceptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ import java.util.Optional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class  CodeSystemService {
+public class CodeSystemService {
 
     private final CodeSystemRepository codeSystemRepository;
     private final ConceptRepository conceptRepository;
@@ -56,15 +56,15 @@ public class  CodeSystemService {
     /**
      * Busca conceito por sistema e código (versão mais recente/aleatória ativa).
      */
-    public Optional<ConceptDisplayProjection> findConcept(String system, String code) {
-        return conceptRepository.findDisplayByCodeSystemUrlAndCodeAndCodeSystemIsLatestTrueAndActiveTrue(system, code);
+    public Optional<ConceptProjection> findConcept(String system, String code) {
+        return conceptRepository.findByCodeSystemUrlAndCodeAndCodeSystemIsLatestTrueAndActiveTrue(system, code);
     }
 
     /**
      * Busca conceito por sistema, código e versão.
      */
-    public Optional<ConceptDisplayProjection> findConcept(String system, String code, String version) {
-        return conceptRepository.findDisplayByCodeSystemUrlAndCodeAndCodeSystemVersionAndActiveTrue(system, code,
+    public Optional<ConceptProjection> findConcept(String system, String code, String version) {
+        return conceptRepository.findByCodeSystemUrlAndCodeAndCodeSystemVersionAndActiveTrue(system, code,
                 version);
     }
 

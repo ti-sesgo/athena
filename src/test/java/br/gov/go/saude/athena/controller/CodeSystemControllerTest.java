@@ -1,6 +1,6 @@
 package br.gov.go.saude.athena.controller;
 
-import br.gov.go.saude.athena.repository.ConceptDisplayProjection;
+import br.gov.go.saude.athena.repository.ConceptProjection;
 import br.gov.go.saude.athena.service.CodeSystemService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
@@ -118,7 +118,7 @@ class CodeSystemControllerTest {
                 String csVersion = "1.0.0";
                 String definition = "Test Definition";
 
-                ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
+                ConceptProjection projection = mock(ConceptProjection.class);
                 when(projection.getDisplay()).thenReturn(display);
                 when(projection.getCodeSystemName()).thenReturn(csName);
                 when(projection.getCodeSystemVersion()).thenReturn(csVersion);
@@ -165,7 +165,7 @@ class CodeSystemControllerTest {
                 String csName = "Test Code System";
                 String csVersion = "1.0.0";
 
-                ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
+                ConceptProjection projection = mock(ConceptProjection.class);
                 when(projection.getDisplay()).thenReturn(display);
                 when(projection.getCodeSystemName()).thenReturn(csName);
                 when(projection.getCodeSystemVersion()).thenReturn(csVersion);
@@ -293,7 +293,7 @@ class CodeSystemControllerTest {
                 String csName = "LOINC";
                 String csVersion = "2.69";
 
-                ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
+                ConceptProjection projection = mock(ConceptProjection.class);
                 when(projection.getDisplay()).thenReturn(display);
                 when(projection.getCodeSystemName()).thenReturn(csName);
                 when(projection.getCodeSystemVersion()).thenReturn(csVersion);
@@ -372,7 +372,7 @@ class CodeSystemControllerTest {
                 String csName = "CBO";
                 String csVersion = "2.0";
 
-                ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
+                ConceptProjection projection = mock(ConceptProjection.class);
                 when(projection.getDisplay()).thenReturn(display);
                 when(projection.getCodeSystemName()).thenReturn(csName);
                 when(projection.getCodeSystemVersion()).thenReturn(csVersion);
@@ -432,7 +432,7 @@ class CodeSystemControllerTest {
                 String display = "Médico clínico";
                 String csName = "CBO";
 
-                ConceptDisplayProjection projection = mock(ConceptDisplayProjection.class);
+                ConceptProjection projection = mock(ConceptProjection.class);
                 when(projection.getDisplay()).thenReturn(display);
                 when(projection.getCodeSystemName()).thenReturn(csName);
                 when(projection.getCodeSystemVersion()).thenReturn(version);

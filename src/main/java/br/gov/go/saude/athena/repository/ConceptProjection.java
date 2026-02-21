@@ -1,6 +1,6 @@
 package br.gov.go.saude.athena.repository;
 
-public interface ConceptDisplayProjection {
+public interface ConceptProjection {
     String getDisplay();
 
     String getCodeSystemName();

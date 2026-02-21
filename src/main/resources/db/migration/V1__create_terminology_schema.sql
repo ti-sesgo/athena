@@ -58,7 +58,7 @@ CREATE INDEX idx_concept_lookup_is_latest ON terminology.concepts(code_system_ur
 -- Comentários para documentação
 COMMENT ON TABLE terminology.packages IS 'Packages FHIR carregados no servidor';
 COMMENT ON TABLE terminology.code_systems IS 'CodeSystems extraídos dos packages';
-COMMENT ON TABLE terminology.concepts IS 'Conceitos (códigos) dos CodeSystems - otimizado para operação $lookup';
+COMMENT ON TABLE terminology.concepts IS 'Conceitos (códigos) dos CodeSystems';
 
 COMMENT ON COLUMN terminology.code_systems.id IS 'Surrogate key (gerado pelo banco)';
 COMMENT ON COLUMN terminology.code_systems.resource_id IS 'ID lógico FHIR do recurso (business key)';
