@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.ContentNegotiationConfigurer;
 import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -44,5 +45,10 @@ public class WebConfig implements WebMvcConfigurer {
                 .mediaType("text/xml", MediaType.parseMediaType("application/fhir+xml"))
                 .mediaType("application/xml", MediaType.parseMediaType("application/fhir+xml"))
                 .mediaType("application/fhir+xml", MediaType.parseMediaType("application/fhir+xml"));
+    }
+
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addRedirectViewController("/", "/fhir");
     }
 }

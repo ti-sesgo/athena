@@ -43,6 +43,7 @@
     <properties>
         <java.version>21</java.version>
         <hapi.fhir.version>7.6.1</hapi.fhir.version>
+        <flyway.version>11.3.0</flyway.version>
     </properties>
 
     <dependencies>
