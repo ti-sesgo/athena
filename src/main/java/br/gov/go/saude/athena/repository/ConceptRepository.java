@@ -12,11 +12,11 @@ import java.util.Optional;
 @Repository
 public interface ConceptRepository extends JpaRepository<ConceptEntity, Long> {
 
-    Optional<ConceptProjection> findByCodeSystemUrlAndCodeAndCodeSystemIsLatestTrueAndActiveTrue(
+    Optional<ConceptEntity> findByCodeSystemUrlAndCodeAndCodeSystemIsLatestTrueAndActiveTrue(
             String codeSystemUrl,
             String code);
 
-    Optional<ConceptProjection> findByCodeSystemUrlAndCodeAndCodeSystemVersionAndActiveTrue(
+    Optional<ConceptEntity> findByCodeSystemUrlAndCodeAndCodeSystemVersionAndActiveTrue(
             String codeSystemUrl,
             String code,
             String codeSystemVersion);

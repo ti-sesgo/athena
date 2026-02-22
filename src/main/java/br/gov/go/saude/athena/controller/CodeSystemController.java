@@ -1,6 +1,6 @@
 package br.gov.go.saude.athena.controller;
 
-import br.gov.go.saude.athena.repository.ConceptProjection;
+import br.gov.go.saude.athena.exception.ConceptNotFoundException;
 import br.gov.go.saude.athena.service.CodeSystemService;
 
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -112,8 +112,8 @@ public class CodeSystemController {
      */
     @GetMapping(value = "/$lookup")
     public ResponseEntity<IBaseResource> lookup(@RequestParam(required = false) String system,
-            @RequestParam(required = false) String code,
-            @RequestParam(required = false) String version) {
+                                                @RequestParam(required = false) String code,
+                                                @RequestParam(required = false) String version) {
 
         log.debug("Lookup GET operation: system={}, code={}, version={}", system, code, version);
 
@@ -149,15 +149,22 @@ public class CodeSystemController {
 
     private ResponseEntity<IBaseResource> processLookup(LookupCriteria criteria) {
         log.debug("Processing lookup for criteria: {}", criteria);
+        Parameters parameters = codeSystemService.lookup(criteria.system(), criteria.code(), criteria.version());
+        return ResponseEntity.ok(parameters);
+    }
 
-        Optional<ConceptProjection> result;
-        if (criteria.version() != null && !criteria.version().isEmpty()) {
-            result = codeSystemService.findConcept(criteria.system(), criteria.code(), criteria.version());
-        } else {
-            result = codeSystemService.findConcept(criteria.system(), criteria.code());
-        }
+    @ExceptionHandler(ConceptNotFoundException.class)
+    public ResponseEntity<IBaseResource> handleConceptNotFound(
+            ConceptNotFoundException ex) {
+        OperationOutcome outcome = new OperationOutcome();
+        outcome.addIssue()
+                .setSeverity(OperationOutcome.IssueSeverity.ERROR)
+                .setCode(OperationOutcome.IssueType.NOTFOUND)
+                .setDiagnostics(ex.getMessage())
+                .setDetails(new CodeableConcept().setText("Concept not found."));
+        ;
 
-        return buildLookupResponse(result, criteria);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outcome);
     }
 
     private ResponseEntity<IBaseResource> buildLookupBadRequestError() {
@@ -170,48 +177,6 @@ public class CodeSystemController {
                 .setDetails(new CodeableConcept().setText("Invalid or missing search parameters."));
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(outcome);
-    }
-
-    private ResponseEntity<IBaseResource> buildLookupResponse(Optional<ConceptProjection> projection,
-            LookupCriteria criteria) {
-        if (projection.isEmpty()) {
-            String diagnostic = "Unable to find code[" + criteria.code() + "] in system[" + criteria.system() + "]";
-            if (criteria.version() != null && !criteria.version().isEmpty()) {
-                diagnostic += " version[" + criteria.version() + "]";
-            }
-
-            OperationOutcome outcome = new OperationOutcome();
-            outcome.addIssue()
-                    .setSeverity(OperationOutcome.IssueSeverity.ERROR)
-                    .setCode(OperationOutcome.IssueType.NOTFOUND)
-                    .setDiagnostics(diagnostic)
-                    .setDetails(new CodeableConcept().setText("Concept not found."));
-
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outcome);
-        }
-
-        ConceptProjection p = projection.get();
-
-        // Monta o retorno Parameters conforme spec FHIR
-        Parameters parameters = new Parameters();
-
-        // 1. Name (Obrigatório)
-        parameters.addParameter("name", new StringType(p.getCodeSystemName()));
-
-        // 2. Version (Obrigatório se o CodeSystem tiver versão)
-        if (p.getCodeSystemVersion() != null) {
-            parameters.addParameter("version", new StringType(p.getCodeSystemVersion()));
-        }
-
-        // 3. Display (Obrigatório)
-        parameters.addParameter("display", new StringType(p.getDisplay()));
-
-        // 4. Definition (Opcional/Recomendado)
-        if (p.getDefinition() != null) {
-            parameters.addParameter("definition", new StringType(p.getDefinition()));
-        }
-
-        return ResponseEntity.ok(parameters);
     }
 
     private record LookupCriteria(String system, String code, String version) {

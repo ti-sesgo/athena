@@ -1,14 +1,22 @@
 package br.gov.go.saude.athena.service;
 
 import br.gov.go.saude.athena.domain.CodeSystemEntity;
+import br.gov.go.saude.athena.domain.ConceptEntity;
+import br.gov.go.saude.athena.exception.ConceptNotFoundException;
 import br.gov.go.saude.athena.repository.CodeSystemRepository;
-import br.gov.go.saude.athena.repository.ConceptProjection;
 import br.gov.go.saude.athena.repository.ConceptRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hl7.fhir.r4.model.CodeSystem;
+
+import ca.uhn.fhir.context.FhirContext;
+import org.hl7.fhir.r4.model.*;
+
+
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -18,7 +26,7 @@ public class CodeSystemService {
 
     private final CodeSystemRepository codeSystemRepository;
     private final ConceptRepository conceptRepository;
-    private final ca.uhn.fhir.context.FhirContext fhirContext;
+    private final FhirContext fhirContext;
 
     /**
      * Busca um CodeSystem pelo ID lógico ou ID interno e retorna como recurso HAPI.
@@ -56,14 +64,14 @@ public class CodeSystemService {
     /**
      * Busca conceito por sistema e código (versão mais recente/aleatória ativa).
      */
-    public Optional<ConceptProjection> findConcept(String system, String code) {
+    public Optional<ConceptEntity> findConcept(String system, String code) {
         return conceptRepository.findByCodeSystemUrlAndCodeAndCodeSystemIsLatestTrueAndActiveTrue(system, code);
     }
 
     /**
      * Busca conceito por sistema, código e versão.
      */
-    public Optional<ConceptProjection> findConcept(String system, String code, String version) {
+    public Optional<ConceptEntity> findConcept(String system, String code, String version) {
         return conceptRepository.findByCodeSystemUrlAndCodeAndCodeSystemVersionAndActiveTrue(system, code,
                 version);
     }
@@ -74,5 +82,71 @@ public class CodeSystemService {
         } catch (NumberFormatException e) {
             return -1L;
         }
+    }
+
+    /**
+     * Operação $lookup.
+     * <p>
+     * Busca os detalhes de um conceito e do CodeSystem
+     * </p>
+     */
+    public Parameters lookup(String system, String code, String version) {
+        Optional<ConceptEntity> concept;
+        if (version != null && !version.isEmpty()) {
+            concept = findConcept(system, code, version);
+        } else {
+            concept = findConcept(system, code);
+        }
+
+        if (concept.isEmpty()) {
+            String diagnostic = "Unable to find code[" + code + "] in system[" + system + "]";
+            if (version != null && !version.isEmpty()) {
+                diagnostic += " version[" + version + "]";
+            }
+            throw new ConceptNotFoundException(diagnostic);
+        }
+
+        ConceptEntity p = concept.get();
+
+        Parameters parameters = new Parameters();
+        parameters.addParameter("name", new StringType(p.getCodeSystemName()));
+
+        if (p.getCodeSystemVersion() != null) {
+            parameters.addParameter("version", new StringType(p.getCodeSystemVersion()));
+        }
+
+        parameters.addParameter("display", new StringType(p.getDisplay()));
+
+        if (p.getDefinition() != null) {
+            parameters.addParameter("definition", new StringType(p.getDefinition()));
+        }
+
+        if (p.getProperty() != null) {
+            for (var property : p.getProperty()) {
+                parameters.addParameter()
+                        .setName("property")
+                        .setPart(toParametersParameter(property));
+            }
+        }
+
+        return parameters;
+    }
+
+    private List<Parameters.ParametersParameterComponent> toParametersParameter
+            (CodeSystem.ConceptPropertyComponent property) {
+
+        Parameters.ParametersParameterComponent parameterCode = new Parameters.ParametersParameterComponent();
+        parameterCode.setName("code");
+        parameterCode.setValue(new CodeType(property.getCode()));
+
+        Parameters.ParametersParameterComponent parameterValue = new Parameters.ParametersParameterComponent();
+        parameterValue.setName("value");
+        parameterValue.setValue(property.getValue());
+
+        List<Parameters.ParametersParameterComponent> part = new ArrayList<>();
+        part.add(parameterCode);
+        part.add(parameterValue);
+
+        return part;
     }
 }

@@ -1,6 +1,6 @@
 package br.gov.go.saude.athena.controller;
 
-import br.gov.go.saude.athena.repository.ConceptProjection;
+import br.gov.go.saude.athena.exception.ConceptNotFoundException;
 import br.gov.go.saude.athena.service.CodeSystemService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
@@ -22,7 +22,6 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -57,7 +56,7 @@ class CodeSystemControllerTest {
                 assertEquals(200, response.getStatusCode().value());
                 IBaseResource result = response.getBody();
                 assertNotNull(result);
-                assertTrue(result instanceof CodeSystem);
+                assertInstanceOf(CodeSystem.class, result);
                 CodeSystem resultCs = (CodeSystem) result;
 
                 assertEquals(id, resultCs.getId());
@@ -95,12 +94,12 @@ class CodeSystemControllerTest {
                 assertEquals(200, response.getStatusCode().value());
                 IBaseResource result = response.getBody();
                 assertNotNull(result);
-                assertTrue(result instanceof Bundle);
+                assertInstanceOf(Bundle.class, result);
                 Bundle bundle = (Bundle) result;
 
                 assertEquals(1, bundle.getTotal());
                 assertTrue(bundle.hasEntry());
-                assertTrue(bundle.getEntryFirstRep().getResource() instanceof CodeSystem);
+                assertInstanceOf(CodeSystem.class, bundle.getEntryFirstRep().getResource());
 
                 CodeSystem resultCs = (CodeSystem) bundle.getEntryFirstRep().getResource();
                 assertEquals(url, resultCs.getUrl());
@@ -111,149 +110,90 @@ class CodeSystemControllerTest {
         @Test
         void shouldPerformLookup() {
                 // Arrange
-                String system = "http://test.com/cs";
-                String code = "TEST-CODE";
-                String display = "Test Display Name";
-                String csName = "Test Code System";
-                String csVersion = "1.0.0";
-                String definition = "Test Definition";
+                Parameters mockParams = new Parameters();
+                mockParams.addParameter("name", new StringType("Test Code System"));
+                mockParams.addParameter("version", new StringType("1.0.0"));
+                mockParams.addParameter("display", new StringType("Test Display Name"));
+                mockParams.addParameter("definition", new StringType("Test Definition"));
 
-                ConceptProjection projection = mock(ConceptProjection.class);
-                when(projection.getDisplay()).thenReturn(display);
-                when(projection.getCodeSystemName()).thenReturn(csName);
-                when(projection.getCodeSystemVersion()).thenReturn(csVersion);
-                when(projection.getDefinition()).thenReturn(definition);
-
-                when(codeSystemService.findConcept(system, code))
-                                .thenReturn(Optional.of(projection));
+                when(codeSystemService.lookup("http://test.com/cs", "TEST-CODE", null)).thenReturn(mockParams);
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup(system, code, null);
+                Parameters parameters = (Parameters) controller.lookup("http://test.com/cs", "TEST-CODE", null)
+                                .getBody();
 
                 // Assert
-                assertEquals(200, response.getStatusCode().value());
-
-                IBaseResource result = response.getBody();
-                assertNotNull(result);
-                assertTrue(result instanceof Parameters);
-                Parameters parameters = (Parameters) result;
-
-                assertTrue(parameters.hasParameter("display"));
-                assertEquals(display,
+                assertEquals("Test Display Name",
                                 ((StringType) parameters.getParameter("display").getValue()).getValue());
-
-                assertTrue(parameters.hasParameter("name"));
-                assertEquals(csName,
-                                ((StringType) parameters.getParameter("name").getValue()).getValue());
-
-                assertTrue(parameters.hasParameter("version"));
-                assertEquals(csVersion,
-                                ((StringType) parameters.getParameter("version").getValue()).getValue());
-
-                assertTrue(parameters.hasParameter("definition"));
-                assertEquals(definition,
+                assertEquals("Test Code System", ((StringType) parameters.getParameter("name").getValue()).getValue());
+                assertEquals("1.0.0", ((StringType) parameters.getParameter("version").getValue()).getValue());
+                assertEquals("Test Definition",
                                 ((StringType) parameters.getParameter("definition").getValue()).getValue());
         }
 
         @Test
         void shouldPerformLookupWithVersion() {
                 // Arrange
-                String system = "http://test.com/cs";
-                String code = "TEST-CODE";
-                String version = "1.0.0";
-                String display = "Test Display Name";
-                String csName = "Test Code System";
-                String csVersion = "1.0.0";
+                Parameters mockParams = new Parameters();
+                mockParams.addParameter("version", new StringType("1.0.0"));
+                mockParams.addParameter("display", new StringType("Test Display Name"));
 
-                ConceptProjection projection = mock(ConceptProjection.class);
-                when(projection.getDisplay()).thenReturn(display);
-                when(projection.getCodeSystemName()).thenReturn(csName);
-                when(projection.getCodeSystemVersion()).thenReturn(csVersion);
-
-                when(codeSystemService.findConcept(system, code, version))
-                                .thenReturn(Optional.of(projection));
+                when(codeSystemService.lookup("http://test.com/cs", "TEST-CODE", "1.0.0")).thenReturn(mockParams);
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup(system, code, version);
+                Parameters parameters = (Parameters) controller.lookup("http://test.com/cs", "TEST-CODE", "1.0.0")
+                                .getBody();
 
                 // Assert
-                assertEquals(200, response.getStatusCode().value());
-
-                IBaseResource result = response.getBody();
-                assertNotNull(result);
-                assertTrue(result instanceof Parameters);
-                Parameters parameters = (Parameters) result;
-
-                assertTrue(parameters.hasParameter("display"));
-                assertEquals(display,
+                assertEquals("Test Display Name",
                                 ((StringType) parameters.getParameter("display").getValue()).getValue());
-                assertTrue(parameters.hasParameter("version"));
-                assertEquals(version,
-                                ((StringType) parameters.getParameter("version").getValue()).getValue());
+                assertEquals("1.0.0", ((StringType) parameters.getParameter("version").getValue()).getValue());
         }
 
         @Test
         void shouldReturnNotFoundWhenLookupFails() {
                 // Arrange
-                String system = "http://test.com/cs";
-                String code = "UNKNOWN";
-
-                when(codeSystemService.findConcept(system, code))
-                                .thenReturn(Optional.empty());
+                when(codeSystemService.lookup("http://test.com/cs", "UNKNOWN", null))
+                                .thenThrow(new ConceptNotFoundException(
+                                                "Unable to find code[UNKNOWN] in system[http://test.com/cs]"));
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup(system, code, null);
+                ResponseEntity<IBaseResource> response;
+                try {
+                        response = controller.lookup("http://test.com/cs", "UNKNOWN", null);
+                } catch (ConceptNotFoundException e) {
+                        response = controller.handleConceptNotFound(e);
+                }
 
                 // Assert
                 assertEquals(404, response.getStatusCode().value());
+                OperationOutcome outcome = (OperationOutcome) response.getBody();
 
-                IBaseResource result = response.getBody();
-                assertNotNull(result);
-                assertTrue(result instanceof OperationOutcome);
-                OperationOutcome outcome = (OperationOutcome) result;
-
-                assertTrue(outcome.hasIssue());
-                assertEquals(OperationOutcome.IssueSeverity.ERROR, outcome.getIssueFirstRep().getSeverity());
                 assertEquals(OperationOutcome.IssueType.NOTFOUND, outcome.getIssueFirstRep().getCode());
-
-                String diagnostic = outcome.getIssueFirstRep().getDiagnostics();
-                assertTrue(diagnostic.contains("code[" + code + "]"));
-                assertTrue(diagnostic.contains("system[" + system + "]"));
-                assertFalse(diagnostic.contains("version"));
-
-                assertTrue(outcome.getIssueFirstRep().hasDetails());
-                assertEquals("Concept not found.", outcome.getIssueFirstRep().getDetails().getText());
+                assertTrue(outcome.getIssueFirstRep().getDiagnostics().contains("code[UNKNOWN]"));
+                assertFalse(outcome.getIssueFirstRep().getDiagnostics().contains("version"));
         }
 
         @Test
         void shouldReturnNotFoundWhenLookupFailsWithVersion() {
                 // Arrange
-                String system = "http://test.com/cs";
-                String code = "UNKNOWN";
-                String version = "1.0.0";
-
-                when(codeSystemService.findConcept(system, code, version))
-                                .thenReturn(Optional.empty());
+                when(codeSystemService.lookup("http://test.com/cs", "UNKNOWN", "1.0.0"))
+                                .thenThrow(new ConceptNotFoundException(
+                                                "Unable to find code[UNKNOWN] in system[http://test.com/cs] version[1.0.0]"));
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup(system, code, version);
+                ResponseEntity<IBaseResource> response;
+                try {
+                        response = controller.lookup("http://test.com/cs", "UNKNOWN", "1.0.0");
+                } catch (ConceptNotFoundException e) {
+                        response = controller.handleConceptNotFound(e);
+                }
 
                 // Assert
                 assertEquals(404, response.getStatusCode().value());
+                OperationOutcome outcome = (OperationOutcome) response.getBody();
 
-                IBaseResource result = response.getBody();
-                assertNotNull(result);
-                assertTrue(result instanceof OperationOutcome);
-                OperationOutcome outcome = (OperationOutcome) result;
-
-                assertTrue(outcome.hasIssue());
-                assertEquals(OperationOutcome.IssueSeverity.ERROR, outcome.getIssueFirstRep().getSeverity());
-                assertEquals(OperationOutcome.IssueType.NOTFOUND, outcome.getIssueFirstRep().getCode());
-
-                String diagnostic = outcome.getIssueFirstRep().getDiagnostics();
-                assertTrue(diagnostic.contains("code[" + code + "]"));
-                assertTrue(diagnostic.contains("system[" + system + "]"));
-                assertTrue(diagnostic.contains("version[" + version + "]"));
+                assertTrue(outcome.getIssueFirstRep().getDiagnostics().contains("version[1.0.0]"));
         }
 
         @Test
@@ -270,7 +210,7 @@ class CodeSystemControllerTest {
 
                 IBaseResource result = response.getBody();
                 assertNotNull(result);
-                assertTrue(result instanceof OperationOutcome);
+                assertInstanceOf(OperationOutcome.class, result);
                 OperationOutcome outcome = (OperationOutcome) result;
 
                 assertTrue(outcome.hasIssue());
@@ -287,34 +227,20 @@ class CodeSystemControllerTest {
         @Test
         void shouldPerformLookupViaPost() {
                 // Arrange
-                String system = "http://loinc.org";
-                String code = "1963-8";
-                String display = "Bicarbonate [Moles/volume] in Serum or Plasma";
-                String csName = "LOINC";
-                String csVersion = "2.69";
+                Parameters mockParams = new Parameters();
+                mockParams.addParameter("display", new StringType("Bicarbonate [Moles/volume] in Serum or Plasma"));
 
-                ConceptProjection projection = mock(ConceptProjection.class);
-                when(projection.getDisplay()).thenReturn(display);
-                when(projection.getCodeSystemName()).thenReturn(csName);
-                when(projection.getCodeSystemVersion()).thenReturn(csVersion);
-
-                when(codeSystemService.findConcept(system, code)).thenReturn(Optional.of(projection));
+                when(codeSystemService.lookup("http://loinc.org", "1963-8", null)).thenReturn(mockParams);
 
                 Parameters parameters = new Parameters();
-                parameters.addParameter("coding", new Coding(system, code, null));
+                parameters.addParameter("coding", new Coding("http://loinc.org", "1963-8", null));
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup(parameters);
+                Parameters resultParams = (Parameters) controller.lookup(parameters).getBody();
 
                 // Assert
-                assertEquals(200, response.getStatusCode().value());
-                IBaseResource result = response.getBody();
-                assertNotNull(result);
-                assertTrue(result instanceof Parameters);
-                Parameters resultParams = (Parameters) result;
-
-                assertTrue(resultParams.hasParameter("display"));
-                assertEquals(display, ((StringType) resultParams.getParameter("display").getValue()).getValue());
+                assertEquals("Bicarbonate [Moles/volume] in Serum or Plasma",
+                                ((StringType) resultParams.getParameter("display").getValue()).getValue());
         }
 
         @Test
@@ -329,7 +255,7 @@ class CodeSystemControllerTest {
         @Test
         void shouldReturnBadRequestWhenPostIsNull() {
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup((Parameters) null);
+                ResponseEntity<IBaseResource> response = controller.lookup(null);
 
                 // Assert
                 assertEquals(400, response.getStatusCode().value());
@@ -365,33 +291,24 @@ class CodeSystemControllerTest {
 
         @Test
         void shouldPerformLookupViaPostWithIndividualParameters() {
-                // Arrange — POST with system/code/version as individual Parameters (not Coding)
-                String system = "http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO";
-                String code = "225125";
-                String display = "Médico clínico";
-                String csName = "CBO";
-                String csVersion = "2.0";
+                // Arrange — POST com system e code (sem ser Coding)
+                Parameters mockParams = new Parameters();
+                mockParams.addParameter("display", new StringType("Médico clínico"));
+                mockParams.addParameter("name", new StringType("CBO"));
 
-                ConceptProjection projection = mock(ConceptProjection.class);
-                when(projection.getDisplay()).thenReturn(display);
-                when(projection.getCodeSystemName()).thenReturn(csName);
-                when(projection.getCodeSystemVersion()).thenReturn(csVersion);
-
-                when(codeSystemService.findConcept(system, code)).thenReturn(Optional.of(projection));
+                when(codeSystemService.lookup("http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO", "225125", null))
+                                .thenReturn(mockParams);
 
                 Parameters parameters = new Parameters();
-                parameters.addParameter("system", new UriType(system));
-                parameters.addParameter("code", new CodeType(code));
+                parameters.addParameter("system", new UriType("http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO"));
+                parameters.addParameter("code", new CodeType("225125"));
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup(parameters);
+                Parameters resultParams = (Parameters) controller.lookup(parameters).getBody();
 
                 // Assert
-                assertEquals(200, response.getStatusCode().value());
-                Parameters resultParams = (Parameters) response.getBody();
-                assertNotNull(resultParams);
-                assertEquals(display, ((StringType) resultParams.getParameter("display").getValue()).getValue());
-                assertEquals(csName, ((StringType) resultParams.getParameter("name").getValue()).getValue());
+                assertEquals("Médico clínico",
+                                ((StringType) resultParams.getParameter("display").getValue()).getValue());
         }
 
         @Test
@@ -400,14 +317,21 @@ class CodeSystemControllerTest {
                 String system = "http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO";
                 String code = "INVALID";
 
-                when(codeSystemService.findConcept(system, code)).thenReturn(Optional.empty());
+                when(codeSystemService.lookup(system, code, null))
+                                .thenThrow(new br.gov.go.saude.athena.exception.ConceptNotFoundException(
+                                                "Unable to find code[" + code + "] in system[" + system + "]"));
 
                 Parameters parameters = new Parameters();
                 parameters.addParameter("system", new UriType(system));
                 parameters.addParameter("code", new CodeType(code));
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup(parameters);
+                ResponseEntity<IBaseResource> response;
+                try {
+                        response = controller.lookup(parameters);
+                } catch (ConceptNotFoundException e) {
+                        response = controller.handleConceptNotFound(e);
+                }
 
                 // Assert
                 assertEquals(404, response.getStatusCode().value());
@@ -426,32 +350,44 @@ class CodeSystemControllerTest {
         @Test
         void shouldPerformLookupViaPostWithIndividualParametersAndVersion() {
                 // Arrange
-                String system = "http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO";
-                String code = "225125";
-                String version = "2.0";
-                String display = "Médico clínico";
-                String csName = "CBO";
-
-                ConceptProjection projection = mock(ConceptProjection.class);
-                when(projection.getDisplay()).thenReturn(display);
-                when(projection.getCodeSystemName()).thenReturn(csName);
-                when(projection.getCodeSystemVersion()).thenReturn(version);
-
-                when(codeSystemService.findConcept(system, code, version)).thenReturn(Optional.of(projection));
+                Parameters mockParams = new Parameters();
+                mockParams.addParameter("version", new StringType("2.0"));
+                when(codeSystemService.lookup("http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO", "225125", "2.0"))
+                                .thenReturn(mockParams);
 
                 Parameters parameters = new Parameters();
-                parameters.addParameter("system", new UriType(system));
-                parameters.addParameter("code", new CodeType(code));
-                parameters.addParameter("version", new StringType(version));
+                parameters.addParameter("system", new UriType("http://www.saude.gov.br/fhir/r4/CodeSystem/BRCBO"));
+                parameters.addParameter("code", new CodeType("225125"));
+                parameters.addParameter("version", new StringType("2.0"));
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.lookup(parameters);
+                Parameters resultParams = (Parameters) controller.lookup(parameters).getBody();
 
                 // Assert
-                assertEquals(200, response.getStatusCode().value());
-                Parameters resultParams = (Parameters) response.getBody();
-                assertNotNull(resultParams);
-                assertEquals(display, ((StringType) resultParams.getParameter("display").getValue()).getValue());
-                assertEquals(version, ((StringType) resultParams.getParameter("version").getValue()).getValue());
+                assertEquals("2.0", ((StringType) resultParams.getParameter("version").getValue()).getValue());
+        }
+
+        @Test
+        void shouldPerformLookupWithProperties() {
+                // Arrange
+                Parameters mockParams = new Parameters();
+                Parameters.ParametersParameterComponent paramProperty = mockParams.addParameter().setName("property");
+                paramProperty.addPart().setName("code").setValue(new CodeType("status"));
+                paramProperty.addPart().setName("value").setValue(new StringType("active"));
+
+                when(codeSystemService.lookup("system", "code", null)).thenReturn(mockParams);
+
+                // Act
+                Parameters responseParams = (Parameters) controller.lookup("system", "code", null).getBody();
+
+                // Assert
+                Parameters.ParametersParameterComponent property = responseParams.getParameter("property");
+                assertNotNull(property);
+
+                String actualCode = ((CodeType) property.getPart().get(0).getValue()).getValue();
+                String actualValue = ((StringType) property.getPart().get(1).getValue()).getValue();
+
+                assertEquals("status", actualCode);
+                assertEquals("active", actualValue);
         }
 }

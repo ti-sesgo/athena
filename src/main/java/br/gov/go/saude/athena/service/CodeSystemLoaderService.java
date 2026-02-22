@@ -36,10 +36,10 @@ public class CodeSystemLoaderService {
     private final TransactionTemplate transactionTemplate;
 
     public CodeSystemLoaderService(ResourceExtractor resourceExtractor,
-            CodeSystemRepository codeSystemRepository,
-            ConceptRepository conceptRepository,
-            ExecutorService executorService,
-            TransactionTemplate transactionTemplate) {
+                                   CodeSystemRepository codeSystemRepository,
+                                   ConceptRepository conceptRepository,
+                                   ExecutorService executorService,
+                                   TransactionTemplate transactionTemplate) {
         this.resourceExtractor = resourceExtractor;
         this.codeSystemRepository = codeSystemRepository;
         this.conceptRepository = conceptRepository;
@@ -187,9 +187,10 @@ public class CodeSystemLoaderService {
                 .codeSystemVersion(codeSystem.getVersion())
                 .codeSystem(csEntity)
                 .codeSystemIsLatest(csEntity.getIsLatest())
-                // TODO: permityir configuração para desativar CodeSystem quando forem status=draft
-                .active(true)
+                .active(csEntity.getActive())
                 .build();
+
+        conceptEntity.setProperty(concept.getProperty());
 
         buffer.add(conceptEntity);
 
