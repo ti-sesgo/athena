@@ -13,6 +13,7 @@ import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.*;
 
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.Cacheable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,9 +87,10 @@ public class CodeSystemService {
     /**
      * Operação $lookup.
      * <p>
-     * Busca os detalhes de um conceito e do CodeSystem
+     * Busca os detalhes de um conceito e do CodeSystem.
      * </p>
      */
+    @Cacheable(value = "concepts", key = "#system + '-' + #code + '-' + (#version ?: 'latest')")
     public Parameters lookup(String system, String code, String version) {
         Optional<ConceptEntity> concept;
         if (version != null && !version.isEmpty()) {
@@ -140,7 +142,7 @@ public class CodeSystemService {
     }
 
     private List<Parameters.ParametersParameterComponent> toParametersParameter(
-        CodeSystem.ConceptPropertyComponent property) {
+            CodeSystem.ConceptPropertyComponent property) {
 
         Parameters.ParametersParameterComponent parameterCode = new Parameters.ParametersParameterComponent();
         parameterCode.setName("code");

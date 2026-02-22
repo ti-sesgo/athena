@@ -3,9 +3,11 @@ package br.gov.go.saude.athena.config;
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.parser.IParser;
 
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+@EnableCaching
 @Configuration
 public class AppConfig {
 

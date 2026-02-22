@@ -22,8 +22,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: none
-    show-sql: false
-    open-in-view: false
     properties:
       hibernate:
         format_sql: true
@@ -32,6 +30,11 @@ spring:
         order_inserts: true
         order_updates: true
         show_sql: false
+
+    cache:
+      cache-names: concepts
+      caffeine:
+        spec: maximumSize=1000,expireAfterAccess=2h
 
   flyway:
     enabled: true
