@@ -36,10 +36,10 @@ public class CodeSystemLoaderService {
     private final TransactionTemplate transactionTemplate;
 
     public CodeSystemLoaderService(ResourceExtractor resourceExtractor,
-                                   CodeSystemRepository codeSystemRepository,
-                                   ConceptRepository conceptRepository,
-                                   ExecutorService executorService,
-                                   TransactionTemplate transactionTemplate) {
+            CodeSystemRepository codeSystemRepository,
+            ConceptRepository conceptRepository,
+            ExecutorService executorService,
+            TransactionTemplate transactionTemplate) {
         this.resourceExtractor = resourceExtractor;
         this.codeSystemRepository = codeSystemRepository;
         this.conceptRepository = conceptRepository;
@@ -191,6 +191,7 @@ public class CodeSystemLoaderService {
                 .build();
 
         conceptEntity.setProperty(concept.getProperty());
+        conceptEntity.setDesignation(concept.getDesignation());
 
         buffer.add(conceptEntity);
 

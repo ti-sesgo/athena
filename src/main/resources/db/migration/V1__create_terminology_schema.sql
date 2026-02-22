@@ -43,6 +43,7 @@ CREATE TABLE terminology.concepts (
     display VARCHAR(1000),
     definition TEXT,
     property TEXT,
+    designation TEXT,
     code_system_url VARCHAR(255) NOT NULL,
     code_system_name VARCHAR(255),
     code_system_version VARCHAR(255),

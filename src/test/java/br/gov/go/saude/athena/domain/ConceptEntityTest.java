@@ -149,4 +149,82 @@ class ConceptEntityTest {
         entity.setProperty(new ArrayList<>());
         assertNull(entity.getPropertyJson());
     }
+
+    @Test
+    void testGetDesignationDeserializesJsonCorrectly() {
+        ConceptEntity entity = new ConceptEntity();
+
+        String json = """
+                [
+                  {
+                    "language": "pt-BR",
+                    "use": {"system": "http://snomed.info/sct", "code": "900000000000013009", "display": "Synonym"},
+                    "value": "Paracetamol"
+                  }
+                ]
+                """;
+
+        entity.setDesignationJson(json);
+
+        List<CodeSystem.ConceptDefinitionDesignationComponent> designations = entity.getDesignation();
+
+        assertEquals(1, designations.size());
+
+        CodeSystem.ConceptDefinitionDesignationComponent desig = designations.get(0);
+        assertEquals("pt-BR", desig.getLanguage());
+        assertEquals("Paracetamol", desig.getValue());
+
+        Coding use = desig.getUse();
+        assertNotNull(use);
+        assertEquals("http://snomed.info/sct", use.getSystem());
+        assertEquals("900000000000013009", use.getCode());
+        assertEquals("Synonym", use.getDisplay());
+    }
+
+    @Test
+    void testSetDesignationSerializesToJsonCorrectly() {
+        ConceptEntity entity = new ConceptEntity();
+
+        List<CodeSystem.ConceptDefinitionDesignationComponent> designations = new ArrayList<>();
+        CodeSystem.ConceptDefinitionDesignationComponent desig = new CodeSystem.ConceptDefinitionDesignationComponent();
+        desig.setLanguage("en");
+        desig.setValue("Acetaminophen");
+
+        Coding use = new Coding();
+        use.setSystem("http://snomed.info/sct");
+        use.setCode("900000000000003001");
+        use.setDisplay("Fully specified name");
+        desig.setUse(use);
+
+        designations.add(desig);
+        entity.setDesignation(designations);
+
+        String jsonResult = entity.getDesignationJson();
+        assertNotNull(jsonResult);
+        assertTrue(jsonResult.contains("\"language\":\"en\""));
+        assertTrue(jsonResult.contains("\"value\":\"Acetaminophen\""));
+        assertTrue(jsonResult.contains("\"system\":\"http://snomed.info/sct\""));
+        assertTrue(jsonResult.contains("\"code\":\"900000000000003001\""));
+        assertTrue(jsonResult.contains("\"display\":\"Fully specified name\""));
+    }
+
+    @Test
+    void testGetDesignationWithNullOrEmptyJson() {
+        ConceptEntity entity = new ConceptEntity();
+        entity.setDesignationJson(null);
+        assertTrue(entity.getDesignation().isEmpty());
+
+        entity.setDesignationJson("   ");
+        assertTrue(entity.getDesignation().isEmpty());
+    }
+
+    @Test
+    void testSetDesignationWithNullOrEmptyList() {
+        ConceptEntity entity = new ConceptEntity();
+        entity.setDesignation(null);
+        assertNull(entity.getDesignationJson());
+
+        entity.setDesignation(new ArrayList<>());
+        assertNull(entity.getDesignationJson());
+    }
 }

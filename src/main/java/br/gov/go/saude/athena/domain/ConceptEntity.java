@@ -25,27 +25,21 @@ import java.util.List;
  * Representa um conceito (código) de um CodeSystem.
  */
 @Entity
-@Table(
-        name = "concepts",
-        schema = "terminology",
-        uniqueConstraints = {
-                @UniqueConstraint(name = "uk_concept_code_url_version",
-                        columnNames = {"code", "code_system_url", "code_system_version"})
-        },
-        indexes = {
-                @Index(name = "idx_concept_lookup_version",
-                        columnList = "code_system_url, code, active, code_system_version"),
-                @Index(name = "idx_concept_lookup_is_latest",
-                        columnList = "code_system_url, code, active, code_system_is_latest")
-        }
-)
+@Table(name = "concepts", schema = "terminology", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_concept_code_url_version", columnNames = { "code", "code_system_url",
+                "code_system_version" })
+}, indexes = {
+        @Index(name = "idx_concept_lookup_version", columnList = "code_system_url, code, active, code_system_version"),
+        @Index(name = "idx_concept_lookup_is_latest", columnList = "code_system_url, code, active, code_system_is_latest")
+})
 @Getter
 @Setter
 @Builder
 @AllArgsConstructor
 public class ConceptEntity {
 
-    public ConceptEntity() {}
+    public ConceptEntity() {
+    }
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,6 +56,9 @@ public class ConceptEntity {
 
     @Column(name = "property", columnDefinition = "TEXT")
     private String propertyJson;
+
+    @Column(name = "designation", columnDefinition = "TEXT")
+    private String designationJson;
 
     @Column(nullable = false)
     private String codeSystemUrl;
@@ -105,20 +102,7 @@ public class ConceptEntity {
                         prop.setValue(new CodeType(
                                 node.get("valueCode").asText()));
                     } else if (node.hasNonNull("valueCoding")) {
-                        JsonNode codingNode = node.get("valueCoding");
-                        Coding coding = new Coding();
-                        if (codingNode.hasNonNull("system"))
-                            coding.setSystem(codingNode.get("system").asText());
-                        if (codingNode.hasNonNull("version"))
-                            coding.setVersion(codingNode.get("version").asText());
-                        if (codingNode.hasNonNull("code"))
-                            coding.setCode(codingNode.get("code").asText());
-                        if (codingNode.hasNonNull("display"))
-                            coding.setDisplay(codingNode.get("display").asText());
-                        if (codingNode.hasNonNull("userSelected"))
-                            coding.setUserSelected(
-                                    codingNode.get("userSelected").asBoolean());
-                        prop.setValue(coding);
+                        prop.setValue(parseCoding(node.get("valueCoding")));
                     } else if (node.hasNonNull("valueString")) {
                         prop.setValue(new StringType(
                                 node.get("valueString").asText()));
@@ -162,19 +146,7 @@ public class ConceptEntity {
                         node.put("valueCode", ((CodeType) value)
                                 .asStringValue());
                     } else if (value instanceof Coding) {
-                        Coding coding = (Coding) value;
-                        ObjectNode codingNode = OBJECT_MAPPER.createObjectNode();
-                        if (coding.hasSystem())
-                            codingNode.put("system", coding.getSystem());
-                        if (coding.hasVersion())
-                            codingNode.put("version", coding.getVersion());
-                        if (coding.hasCode())
-                            codingNode.put("code", coding.getCode());
-                        if (coding.hasDisplay())
-                            codingNode.put("display", coding.getDisplay());
-                        if (coding.hasUserSelected())
-                            codingNode.put("userSelected", coding.getUserSelected());
-                        node.set("valueCoding", codingNode);
+                        node.set("valueCoding", serializeCoding((Coding) value));
                     } else if (value instanceof StringType) {
                         node.put("valueString", ((StringType) value)
                                 .asStringValue());
@@ -198,5 +170,95 @@ public class ConceptEntity {
         } catch (Exception e) {
             throw new RuntimeException("Error serializing property JSON", e);
         }
+    }
+
+    public List<CodeSystem.ConceptDefinitionDesignationComponent> getDesignation() {
+        if (this.designationJson == null || this.designationJson.trim().isEmpty()) {
+            return new ArrayList<>();
+        }
+        try {
+            List<CodeSystem.ConceptDefinitionDesignationComponent> result = new ArrayList<>();
+            JsonNode arrayNode = OBJECT_MAPPER.readTree(this.designationJson);
+            if (arrayNode.isArray()) {
+                for (JsonNode node : arrayNode) {
+                    CodeSystem.ConceptDefinitionDesignationComponent desig = new CodeSystem.ConceptDefinitionDesignationComponent();
+                    if (node.hasNonNull("language")) {
+                        desig.setLanguage(node.get("language").asText());
+                    }
+                    if (node.hasNonNull("use")) {
+                        desig.setUse(parseCoding(node.get("use")));
+                    }
+                    if (node.hasNonNull("value")) {
+                        desig.setValue(node.get("value").asText());
+                    }
+                    result.add(desig);
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Error parsing designation JSON", e);
+        }
+    }
+
+    public void setDesignation(List<CodeSystem.ConceptDefinitionDesignationComponent> designations) {
+        if (designations == null || designations.isEmpty()) {
+            this.designationJson = null;
+            return;
+        }
+        try {
+            ArrayNode arrayNode = OBJECT_MAPPER.createArrayNode();
+            for (CodeSystem.ConceptDefinitionDesignationComponent desig : designations) {
+                ObjectNode node = OBJECT_MAPPER.createObjectNode();
+                if (desig.hasLanguage()) {
+                    node.put("language", desig.getLanguage());
+                }
+                if (desig.hasUse()) {
+                    node.set("use", serializeCoding(desig.getUse()));
+                }
+                if (desig.hasValue()) {
+                    node.put("value", desig.getValue());
+                }
+                arrayNode.add(node);
+            }
+            this.designationJson = OBJECT_MAPPER.writeValueAsString(arrayNode);
+        } catch (Exception e) {
+            throw new RuntimeException("Error serializing designation JSON", e);
+        }
+    }
+
+    private static Coding parseCoding(JsonNode codingNode) {
+        if (codingNode == null || codingNode.isNull()) {
+            return null;
+        }
+        Coding coding = new Coding();
+        if (codingNode.hasNonNull("system"))
+            coding.setSystem(codingNode.get("system").asText());
+        if (codingNode.hasNonNull("version"))
+            coding.setVersion(codingNode.get("version").asText());
+        if (codingNode.hasNonNull("code"))
+            coding.setCode(codingNode.get("code").asText());
+        if (codingNode.hasNonNull("display"))
+            coding.setDisplay(codingNode.get("display").asText());
+        if (codingNode.hasNonNull("userSelected"))
+            coding.setUserSelected(codingNode.get("userSelected").asBoolean());
+        return coding;
+    }
+
+    private static ObjectNode serializeCoding(Coding coding) {
+        if (coding == null) {
+            return null;
+        }
+        ObjectNode codingNode = OBJECT_MAPPER.createObjectNode();
+        if (coding.hasSystem())
+            codingNode.put("system", coding.getSystem());
+        if (coding.hasVersion())
+            codingNode.put("version", coding.getVersion());
+        if (coding.hasCode())
+            codingNode.put("code", coding.getCode());
+        if (coding.hasDisplay())
+            codingNode.put("display", coding.getDisplay());
+        if (coding.hasUserSelected())
+            codingNode.put("userSelected", coding.getUserSelected());
+        return codingNode;
     }
 }

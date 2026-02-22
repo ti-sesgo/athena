@@ -390,4 +390,35 @@ class CodeSystemControllerTest {
                 assertEquals("status", actualCode);
                 assertEquals("active", actualValue);
         }
+
+        @Test
+        void shouldPerformLookupWithDesignation() {
+                // Arrange
+                Parameters mockParams = new Parameters();
+                Parameters.ParametersParameterComponent paramDesignation = mockParams.addParameter()
+                                .setName("designation");
+                paramDesignation.addPart().setName("language").setValue(new CodeType("pt-BR"));
+                paramDesignation.addPart().setName("use")
+                                .setValue(new Coding("http://snomed.info/sct", "900000000000013009", "Synonym"));
+                paramDesignation.addPart().setName("value").setValue(new StringType("Paracetamol"));
+
+                when(codeSystemService.lookup("system", "code", null)).thenReturn(mockParams);
+
+                // Act
+                Parameters responseParams = (Parameters) controller.lookup("system", "code", null).getBody();
+
+                // Assert
+                Parameters.ParametersParameterComponent designation = responseParams.getParameter("designation");
+                assertNotNull(designation);
+
+                String actualLanguage = ((CodeType) designation.getPart().get(0).getValue()).getValue();
+                Coding actualUse = (Coding) designation.getPart().get(1).getValue();
+                String actualValue = ((StringType) designation.getPart().get(2).getValue()).getValue();
+
+                assertEquals("pt-BR", actualLanguage);
+                assertEquals("http://snomed.info/sct", actualUse.getSystem());
+                assertEquals("900000000000013009", actualUse.getCode());
+                assertEquals("Synonym", actualUse.getDisplay());
+                assertEquals("Paracetamol", actualValue);
+        }
 }

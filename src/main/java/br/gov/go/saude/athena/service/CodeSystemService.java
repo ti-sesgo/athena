@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.*;
 
-
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -129,11 +128,19 @@ public class CodeSystemService {
             }
         }
 
+        if (p.getDesignation() != null) {
+            for (var designation : p.getDesignation()) {
+                parameters.addParameter()
+                        .setName("designation")
+                        .setPart(toParametersParameter(designation));
+            }
+        }
+
         return parameters;
     }
 
-    private List<Parameters.ParametersParameterComponent> toParametersParameter
-            (CodeSystem.ConceptPropertyComponent property) {
+    private List<Parameters.ParametersParameterComponent> toParametersParameter(
+        CodeSystem.ConceptPropertyComponent property) {
 
         Parameters.ParametersParameterComponent parameterCode = new Parameters.ParametersParameterComponent();
         parameterCode.setName("code");
@@ -146,6 +153,35 @@ public class CodeSystemService {
         List<Parameters.ParametersParameterComponent> part = new ArrayList<>();
         part.add(parameterCode);
         part.add(parameterValue);
+
+        return part;
+    }
+
+    private List<Parameters.ParametersParameterComponent> toParametersParameter(
+            CodeSystem.ConceptDefinitionDesignationComponent designation) {
+
+        List<Parameters.ParametersParameterComponent> part = new ArrayList<>();
+
+        if (designation.hasLanguage()) {
+            Parameters.ParametersParameterComponent parameterLanguage = new Parameters.ParametersParameterComponent();
+            parameterLanguage.setName("language");
+            parameterLanguage.setValue(new CodeType(designation.getLanguage()));
+            part.add(parameterLanguage);
+        }
+
+        if (designation.hasUse()) {
+            Parameters.ParametersParameterComponent parameterUse = new Parameters.ParametersParameterComponent();
+            parameterUse.setName("use");
+            parameterUse.setValue(designation.getUse());
+            part.add(parameterUse);
+        }
+
+        if (designation.hasValue()) {
+            Parameters.ParametersParameterComponent parameterValue = new Parameters.ParametersParameterComponent();
+            parameterValue.setName("value");
+            parameterValue.setValue(new StringType(designation.getValue()));
+            part.add(parameterValue);
+        }
 
         return part;
     }
