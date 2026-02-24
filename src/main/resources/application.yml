@@ -20,6 +20,7 @@ spring:
       add-mappings: false
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: none
     properties:
