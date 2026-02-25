@@ -159,27 +159,29 @@ public class CodeSystemController {
     }
 
     @ExceptionHandler(ConceptNotFoundException.class)
-    public ResponseEntity<IBaseResource> handleConceptNotFound(
-            ConceptNotFoundException ex) {
+    public ResponseEntity<IBaseResource> handleConceptNotFound(ConceptNotFoundException ex) {
         OperationOutcome outcome = new OperationOutcome();
         outcome.addIssue()
                 .setSeverity(OperationOutcome.IssueSeverity.ERROR)
                 .setCode(OperationOutcome.IssueType.NOTFOUND)
                 .setDiagnostics(ex.getMessage())
                 .setDetails(new CodeableConcept().setText("Concept not found."));
-
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outcome);
     }
 
     private ResponseEntity<IBaseResource> buildLookupBadRequestError() {
+        return badRequest(
+                "For lookup operation a client SHALL provide both a system and a code, either using the system+code parameters, or in the coding parameter.",
+                "Invalid or missing search parameters.");
+    }
+
+    private ResponseEntity<IBaseResource> badRequest(String diagnostics, String details) {
         OperationOutcome outcome = new OperationOutcome();
         outcome.addIssue()
                 .setSeverity(OperationOutcome.IssueSeverity.ERROR)
                 .setCode(OperationOutcome.IssueType.REQUIRED)
-                .setDiagnostics(
-                        "For lookup operation a client SHALL provide both a system and a code, either using the system+code parameters, or in the coding parameter.")
-                .setDetails(new CodeableConcept().setText("Invalid or missing search parameters."));
-
+                .setDiagnostics(diagnostics)
+                .setDetails(StringUtils.hasText(details) ? new CodeableConcept().setText(details) : null);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(outcome);
     }
 
@@ -211,7 +213,7 @@ public class CodeSystemController {
                     : !StringUtils.hasText(url)
                             ? "No url parameter provided in request"
                             : "No code parameter provided in request";
-            return buildValidateCodeBadRequestError(msg);
+            return badRequest(msg, null);
         }
         return executeValidateCode(url, code, version, display);
     }
@@ -230,7 +232,7 @@ public class CodeSystemController {
         log.debug("Validate-code by id: id={}, code={}, version={}, display={}", id, code, version, display);
 
         if (!StringUtils.hasText(code)) {
-            return buildValidateCodeBadRequestError("No code parameter provided in request");
+            return badRequest("No code parameter provided in request", null);
         }
 
         String systemUrl = codeSystemService.findResourceById(id)
@@ -247,16 +249,17 @@ public class CodeSystemController {
     @PostMapping(value = "/$validate-code")
     public ResponseEntity<IBaseResource> validateCode(@RequestBody Parameters parameters) {
         if (parameters == null) {
-            return buildValidateCodeBadRequestError("No parameters provided in request");
+            return badRequest("No parameters provided in request", null);
         }
 
         if (ValidateCodeRequest.hasCodeSystemParam(parameters)) {
-            return buildValidateCodeBadRequestError("Server does not support codeSystem parameter");
+            return badRequest("Server does not support codeSystem parameter", null);
         }
 
         var requests = ValidateCodeRequest.fromParameters(parameters);
         if (requests.isEmpty()) {
-            return buildValidateCodeInvalidParamsError();
+            return badRequest("Invalid parameters for $validate-code operation",
+                    "Provide one of code+url, coding, or codeableConcept");
         }
         return processValidateCodeRequests(requests);
     }
@@ -272,11 +275,11 @@ public class CodeSystemController {
             @RequestBody Parameters parameters) {
 
         if (parameters == null) {
-            return buildValidateCodeBadRequestError("No parameters provided in request");
+            return badRequest("No parameters provided in request", null);
         }
 
         if (ValidateCodeRequest.hasCodeSystemParam(parameters)) {
-            return buildValidateCodeBadRequestError("Server does not support codeSystem parameter");
+            return badRequest("Server does not support codeSystem parameter", null);
         }
 
         String systemUrl = codeSystemService.findResourceById(id)
@@ -285,7 +288,8 @@ public class CodeSystemController {
 
         var requests = ValidateCodeRequest.fromParameters(parameters, systemUrl);
         if (requests.isEmpty()) {
-            return buildValidateCodeInvalidParamsError();
+            return badRequest("Invalid parameters for $validate-code operation",
+                    "Provide one of code+url, coding, or codeableConcept");
         }
         return processValidateCodeRequests(requests);
     }
@@ -306,28 +310,4 @@ public class CodeSystemController {
         return ResponseEntity.ok(lastResult.toParameters());
     }
 
-    private ResponseEntity<IBaseResource> buildValidateCodeInvalidParamsError() {
-        return buildValidateCodeBadRequestError(
-                "Invalid parameters for $validate-code operation",
-                "Provide one of code+url, coding, or codeableConcept");
-    }
-
-    private ResponseEntity<IBaseResource> buildValidateCodeBadRequestError(String message) {
-        return buildValidateCodeBadRequestError(message, null);
-    }
-
-    /**
-     * Spec: 400 quando o servidor não consegue determinar validade.
-     * Código inválido retorna 200 + result=false, não 400.
-     */
-    private ResponseEntity<IBaseResource> buildValidateCodeBadRequestError(String message, String details) {
-        OperationOutcome outcome = new OperationOutcome();
-        outcome.addIssue()
-                .setSeverity(OperationOutcome.IssueSeverity.ERROR)
-                .setCode(OperationOutcome.IssueType.REQUIRED)
-                .setDiagnostics(message)
-                .setDetails(StringUtils.hasText(details) ? new CodeableConcept().setText(details) : null);
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(outcome);
-    }
 }

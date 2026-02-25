@@ -122,6 +122,21 @@ public class CodeSystemService {
                 version);
     }
 
+    /**
+     * Busca conceito por sistema, código e versão (opcional).
+     * Usa versão mais recente quando version é null ou vazio.
+     */
+    private Optional<ConceptEntity> findConceptOptional(String system, String code, String version) {
+        return StringUtils.hasText(version)
+                ? findConcept(system, code, version)
+                : findConcept(system, code);
+    }
+
+    private static String notFoundDiagnostic(String system, String code, String version) {
+        return "Unable to find code[" + code + "] in system[" + system + "]"
+                + (StringUtils.hasText(version) ? " version[" + version + "]" : "");
+    }
+
     private Long tryParseId(String id) {
         try {
             return Long.parseLong(id);
@@ -138,19 +153,9 @@ public class CodeSystemService {
      */
     @Cacheable(value = "concepts", key = "#system + '-' + #code + '-' + (#version ?: 'latest')")
     public Parameters lookup(String system, String code, String version) {
-        Optional<ConceptEntity> concept;
-        if (version != null && !version.isEmpty()) {
-            concept = findConcept(system, code, version);
-        } else {
-            concept = findConcept(system, code);
-        }
-
+        Optional<ConceptEntity> concept = findConceptOptional(system, code, version);
         if (concept.isEmpty()) {
-            String diagnostic = "Unable to find code[" + code + "] in system[" + system + "]";
-            if (version != null && !version.isEmpty()) {
-                diagnostic += " version[" + version + "]";
-            }
-            throw new ConceptNotFoundException(diagnostic);
+            throw new ConceptNotFoundException(notFoundDiagnostic(system, code, version));
         }
 
         ConceptEntity p = concept.get();
@@ -192,17 +197,9 @@ public class CodeSystemService {
      * Valida se um código pertence ao CodeSystem (banco de dados).
      */
     public ValidateCodeResult validateCode(String system, String code, String version, String requestDisplay) {
-        Optional<ConceptEntity> concept;
-        if (StringUtils.hasText(version)) {
-            concept = findConcept(system, code, version);
-        } else {
-            concept = findConcept(system, code);
-        }
-
+        Optional<ConceptEntity> concept = findConceptOptional(system, code, version);
         if (concept.isEmpty()) {
-            String diagnostic = "Unable to find code[" + code + "] in system[" + system + "]";
-            if (StringUtils.hasText(version)) diagnostic += " version[" + version + "]";
-            return new ValidateCodeResult(false, diagnostic, null);
+            return new ValidateCodeResult(false, notFoundDiagnostic(system, code, version), null);
         }
 
         String recommendedDisplay = concept.get().getDisplay();
