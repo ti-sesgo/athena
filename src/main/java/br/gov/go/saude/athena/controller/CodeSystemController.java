@@ -10,10 +10,15 @@ import org.hl7.fhir.r4.model.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.Optional;
+
+import br.gov.go.saude.athena.dto.ValidateCodeRequest;
+import br.gov.go.saude.athena.dto.ValidateCodeResult;
 
 @Slf4j
 @RestController
@@ -162,7 +167,6 @@ public class CodeSystemController {
                 .setCode(OperationOutcome.IssueType.NOTFOUND)
                 .setDiagnostics(ex.getMessage())
                 .setDetails(new CodeableConcept().setText("Concept not found."));
-        ;
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(outcome);
     }
@@ -180,5 +184,150 @@ public class CodeSystemController {
     }
 
     private record LookupCriteria(String system, String code, String version) {
+    }
+
+    // --- $validate-code (FHIR R4) ---
+
+    /**
+     * Operação $validate-code (FHIR R4).
+     * <p>
+     * Valida se um código pertence ao CodeSystem. Retorna result (true/false),
+     * message opcional e display recomendado.
+     * </p>
+     * GET /CodeSystem/$validate-code?url={url}&code={code}&version={version}&display={display}
+     */
+    @GetMapping(value = "/$validate-code")
+    public ResponseEntity<IBaseResource> validateCode(
+            @RequestParam(required = false) String url,
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String version,
+            @RequestParam(required = false) String display) {
+
+        log.debug("Validate-code GET: url={}, code={}, version={}, display={}", url, code, version, display);
+
+        if (!StringUtils.hasText(url) || !StringUtils.hasText(code)) {
+            String msg = !StringUtils.hasText(url) && !StringUtils.hasText(code)
+                    ? "No url and code parameters provided in request"
+                    : !StringUtils.hasText(url)
+                            ? "No url parameter provided in request"
+                            : "No code parameter provided in request";
+            return buildValidateCodeBadRequestError(msg);
+        }
+        return executeValidateCode(url, code, version, display);
+    }
+
+    /**
+     * Operação $validate-code no nível da instância.
+     * GET /CodeSystem/{id}/$validate-code?code={code}&version={version}&display={display}
+     */
+    @GetMapping(value = "/{id}/$validate-code")
+    public ResponseEntity<IBaseResource> validateCodeById(
+            @PathVariable String id,
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String version,
+            @RequestParam(required = false) String display) {
+
+        log.debug("Validate-code by id: id={}, code={}, version={}, display={}", id, code, version, display);
+
+        if (!StringUtils.hasText(code)) {
+            return buildValidateCodeBadRequestError("No code parameter provided in request");
+        }
+
+        String systemUrl = codeSystemService.findResourceById(id)
+                .map(CodeSystem::getUrl)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "CodeSystem not found: " + id));
+
+        return executeValidateCode(systemUrl, code, version, display);
+    }
+
+    /**
+     * Operação $validate-code via POST.
+     * Spec: um (e apenas um) de code+url, coding ou codeableConcept. url ou codeSystem quando não no nível da instância.
+     */
+    @PostMapping(value = "/$validate-code")
+    public ResponseEntity<IBaseResource> validateCode(@RequestBody Parameters parameters) {
+        if (parameters == null) {
+            return buildValidateCodeBadRequestError("No parameters provided in request");
+        }
+
+        if (ValidateCodeRequest.hasCodeSystemParam(parameters)) {
+            return buildValidateCodeBadRequestError("Server does not support codeSystem parameter");
+        }
+
+        var requests = ValidateCodeRequest.fromParameters(parameters);
+        if (requests.isEmpty()) {
+            return buildValidateCodeInvalidParamsError();
+        }
+        return processValidateCodeRequests(requests);
+    }
+
+    /**
+     * Operação $validate-code via POST no nível da instância.
+     * POST /CodeSystem/{id}/$validate-code
+     * Spec: url é opcional no nível da instância (inferido do id).
+     */
+    @PostMapping(value = "/{id}/$validate-code")
+    public ResponseEntity<IBaseResource> validateCodeByIdPost(
+            @PathVariable String id,
+            @RequestBody Parameters parameters) {
+
+        if (parameters == null) {
+            return buildValidateCodeBadRequestError("No parameters provided in request");
+        }
+
+        if (ValidateCodeRequest.hasCodeSystemParam(parameters)) {
+            return buildValidateCodeBadRequestError("Server does not support codeSystem parameter");
+        }
+
+        String systemUrl = codeSystemService.findResourceById(id)
+                .map(CodeSystem::getUrl)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "CodeSystem not found: " + id));
+
+        var requests = ValidateCodeRequest.fromParameters(parameters, systemUrl);
+        if (requests.isEmpty()) {
+            return buildValidateCodeInvalidParamsError();
+        }
+        return processValidateCodeRequests(requests);
+    }
+
+    private ResponseEntity<IBaseResource> executeValidateCode(String system, String code, String version, String display) {
+        ValidateCodeResult result = codeSystemService.validateCode(system, code, version, display);
+        return ResponseEntity.ok(result.toParameters());
+    }
+
+    private ResponseEntity<IBaseResource> processValidateCodeRequests(List<ValidateCodeRequest> requests) {
+        ValidateCodeResult lastResult = null;
+        for (var req : requests) {
+            lastResult = codeSystemService.validateCode(req.system(), req.code(), req.version(), req.display());
+            if (lastResult.result()) {
+                return ResponseEntity.ok(lastResult.toParameters());
+            }
+        }
+        return ResponseEntity.ok(lastResult.toParameters());
+    }
+
+    private ResponseEntity<IBaseResource> buildValidateCodeInvalidParamsError() {
+        return buildValidateCodeBadRequestError(
+                "Invalid parameters for $validate-code operation",
+                "Provide one of code+url, coding, or codeableConcept");
+    }
+
+    private ResponseEntity<IBaseResource> buildValidateCodeBadRequestError(String message) {
+        return buildValidateCodeBadRequestError(message, null);
+    }
+
+    /**
+     * Spec: 400 quando o servidor não consegue determinar validade.
+     * Código inválido retorna 200 + result=false, não 400.
+     */
+    private ResponseEntity<IBaseResource> buildValidateCodeBadRequestError(String message, String details) {
+        OperationOutcome outcome = new OperationOutcome();
+        outcome.addIssue()
+                .setSeverity(OperationOutcome.IssueSeverity.ERROR)
+                .setCode(OperationOutcome.IssueType.REQUIRED)
+                .setDiagnostics(message)
+                .setDetails(StringUtils.hasText(details) ? new CodeableConcept().setText(details) : null);
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(outcome);
     }
 }

@@ -2,8 +2,10 @@ package br.gov.go.saude.athena.service;
 
 import br.gov.go.saude.athena.domain.CodeSystemEntity;
 import br.gov.go.saude.athena.domain.ConceptEntity;
+import br.gov.go.saude.athena.dto.ValidateCodeResult;
 import br.gov.go.saude.athena.exception.ConceptNotFoundException;
 import br.gov.go.saude.athena.repository.CodeSystemRepository;
+import br.gov.go.saude.athena.repository.CodeSystemRepository.UrlVersionLatestProjection;
 import br.gov.go.saude.athena.repository.ConceptRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -12,11 +14,14 @@ import lombok.extern.slf4j.Slf4j;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.*;
 
-import org.springframework.stereotype.Service;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -60,6 +65,47 @@ public class CodeSystemService {
     public Optional<CodeSystemEntity> findByUrl(String url) {
         return codeSystemRepository.findByUrlAndIsLatestTrueAndActiveTrue(url);
     }
+
+    /**
+     * Lista URLs distintas dos CodeSystems ativos.
+     * Resultado em cache heap (carregado uma vez, reutilizado em respostas futuras).
+     */
+    @Cacheable(value = "codeSystem", key = "'urls'")
+    public List<String> findDistinctUrlsByActiveTrue() {
+        return codeSystemRepository.findDistinctUrlByActiveTrueOrderByUrl();
+    }
+
+    /**
+     * Lista CodeSystems ativos com suas versões suportadas.
+     * Cada entrada contém uri, versão e se é a versão padrão (isLatest).
+     * Resultado em cache heap.
+     *
+     * @see <a href="https://hl7.org/fhir/R4/terminologycapabilities.html">TerminologyCapabilities.codeSystem</a>
+     */
+    @Cacheable(value = "codeSystem", key = "'withVersions'")
+    public List<CodeSystemWithVersions> findCodeSystemsWithVersionsByActiveTrue() {
+        List<UrlVersionLatestProjection> rows = codeSystemRepository.findByActiveTrueOrderByUrlAscVersionAsc();
+        return groupByUrlWithVersions(rows);
+    }
+
+    private List<CodeSystemWithVersions> groupByUrlWithVersions(List<UrlVersionLatestProjection> rows) {
+        Map<String, List<VersionInfo>> byUrl = new LinkedHashMap<>();
+        for (var row : rows) {
+            String url = row.getUrl();
+            String version = row.getVersion();
+            boolean isDefault = Boolean.TRUE.equals(row.getIsLatest()); // getiIsLatest pode ser null
+
+            byUrl.computeIfAbsent(url, k -> new ArrayList<>())
+                    .add(new VersionInfo(version, isDefault));
+        }
+        return byUrl.entrySet().stream()
+                .map(e -> new CodeSystemWithVersions(e.getKey(), e.getValue()))
+                .toList();
+    }
+
+    public record CodeSystemWithVersions(String uri, List<VersionInfo> versions) {}
+
+    public record VersionInfo(String code, boolean isDefault) {}
 
     /**
      * Busca conceito por sistema e código (versão mais recente/aleatória ativa).
@@ -139,6 +185,33 @@ public class CodeSystemService {
         }
 
         return parameters;
+    }
+
+    /**
+     * Operação $validate-code.
+     * Valida se um código pertence ao CodeSystem (banco de dados).
+     */
+    public ValidateCodeResult validateCode(String system, String code, String version, String requestDisplay) {
+        Optional<ConceptEntity> concept;
+        if (StringUtils.hasText(version)) {
+            concept = findConcept(system, code, version);
+        } else {
+            concept = findConcept(system, code);
+        }
+
+        if (concept.isEmpty()) {
+            String diagnostic = "Unable to find code[" + code + "] in system[" + system + "]";
+            if (StringUtils.hasText(version)) diagnostic += " version[" + version + "]";
+            return new ValidateCodeResult(false, diagnostic, null);
+        }
+
+        String recommendedDisplay = concept.get().getDisplay();
+        if (StringUtils.hasText(requestDisplay) && !requestDisplay.equals(recommendedDisplay)) {
+            return new ValidateCodeResult(false,
+                    "The display \"" + requestDisplay + "\" is incorrect.",
+                    recommendedDisplay);
+        }
+        return new ValidateCodeResult(true, null, recommendedDisplay);
     }
 
     private List<Parameters.ParametersParameterComponent> toParametersParameter(

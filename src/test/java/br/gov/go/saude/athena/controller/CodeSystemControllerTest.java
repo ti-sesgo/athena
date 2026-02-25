@@ -1,5 +1,6 @@
 package br.gov.go.saude.athena.controller;
 
+import br.gov.go.saude.athena.dto.ValidateCodeResult;
 import br.gov.go.saude.athena.exception.ConceptNotFoundException;
 import br.gov.go.saude.athena.service.CodeSystemService;
 import org.hl7.fhir.instance.model.api.IBaseResource;
@@ -8,8 +9,10 @@ import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Coding;
 import org.hl7.fhir.r4.model.Parameters;
 import org.hl7.fhir.r4.model.StringType;
-import org.hl7.fhir.r4.model.UriType;
+import org.hl7.fhir.r4.model.BooleanType;
 import org.hl7.fhir.r4.model.CodeType;
+import org.hl7.fhir.r4.model.CodeableConcept;
+import org.hl7.fhir.r4.model.UriType;
 import org.springframework.http.ResponseEntity;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +25,9 @@ import org.hl7.fhir.r4.model.OperationOutcome;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -420,5 +426,182 @@ class CodeSystemControllerTest {
                 assertEquals("900000000000013009", actualUse.getCode());
                 assertEquals("Synonym", actualUse.getDisplay());
                 assertEquals("Paracetamol", actualValue);
+        }
+
+        // --- $validate-code ---
+
+        @Test
+        void shouldReturnResultTrueWhenCodeIsValid() {
+                when(codeSystemService.validateCode("http://test.com/cs", "TEST-CODE", null, null))
+                                .thenReturn(new ValidateCodeResult(true, null, "Test Display"));
+
+                var response = controller.validateCode("http://test.com/cs", "TEST-CODE", null, null);
+
+                assertEquals(200, response.getStatusCode().value());
+                Parameters params = (Parameters) response.getBody();
+                assertTrue(result(params));
+                assertEquals("Test Display", display(params));
+                assertNull(params.getParameter("message"));
+        }
+
+        @Test
+        void shouldReturnResultFalseWhenCodeIsInvalid() {
+                when(codeSystemService.validateCode("http://test.com/cs", "UNKNOWN", null, null))
+                                .thenReturn(new ValidateCodeResult(false, "Unable to find code[UNKNOWN] in system[http://test.com/cs]", null));
+
+                var response = controller.validateCode("http://test.com/cs", "UNKNOWN", null, null);
+
+                assertEquals(200, response.getStatusCode().value());
+                assertFalse(result((Parameters) response.getBody()));
+                assertEquals("Unable to find code[UNKNOWN] in system[http://test.com/cs]", message((Parameters) response.getBody()));
+        }
+
+        @Test
+        void shouldReturn400WhenUrlMissing() {
+                var response = controller.validateCode(null, "code", null, null);
+
+                assertEquals(400, response.getStatusCode().value());
+                assertTrue(((OperationOutcome) response.getBody()).getIssueFirstRep().getDiagnostics().contains("url"));
+        }
+
+        @Test
+        void shouldReturn400WhenCodeMissing() {
+                var response = controller.validateCode("http://test.com/cs", null, null, null);
+
+                assertEquals(400, response.getStatusCode().value());
+                assertTrue(((OperationOutcome) response.getBody()).getIssueFirstRep().getDiagnostics().contains("code"));
+        }
+
+        @Test
+        void shouldValidateCodeById() {
+                CodeSystem cs = new CodeSystem();
+                cs.setId("loinc");
+                cs.setUrl("http://loinc.org");
+                when(codeSystemService.findResourceById("loinc")).thenReturn(Optional.of(cs));
+                when(codeSystemService.validateCode("http://loinc.org", "1963-8", null, null))
+                                .thenReturn(new ValidateCodeResult(true, null, "Bicarbonate [Moles/volume] in Serum"));
+
+                var response = controller.validateCodeById("loinc", "1963-8", null, null);
+
+                assertEquals(200, response.getStatusCode().value());
+                Parameters params = (Parameters) response.getBody();
+                assertTrue(result(params));
+                assertEquals("Bicarbonate [Moles/volume] in Serum", display(params));
+        }
+
+        @Test
+        void shouldValidateCodePostWithUrlAndCode() {
+                when(codeSystemService.validateCode("http://test.com/cs", "225125", "2.0", null))
+                                .thenReturn(new ValidateCodeResult(true, null, "Médico clínico"));
+
+                Parameters input = params("url", "http://test.com/cs");
+                input.addParameter("code", new CodeType("225125"));
+                input.addParameter("version", new StringType("2.0"));
+
+                var response = controller.validateCode(input);
+
+                assertEquals(200, response.getStatusCode().value());
+                assertTrue(result((Parameters) response.getBody()));
+                assertEquals("Médico clínico", display((Parameters) response.getBody()));
+        }
+
+        @Test
+        void shouldValidateCodePostWithCoding() {
+                when(codeSystemService.validateCode("http://loinc.org", "1963-8", null, "test"))
+                                .thenReturn(new ValidateCodeResult(false, "The display \"test\" is incorrect.", "Bicarbonate [Moles/volume] in Serum"));
+
+                Parameters input = params("url", "http://loinc.org");
+                input.addParameter("coding", new Coding("http://loinc.org", "1963-8", "test"));
+
+                var response = controller.validateCode(input);
+
+                assertEquals(200, response.getStatusCode().value());
+                Parameters params = (Parameters) response.getBody();
+                assertFalse(result(params));
+                assertEquals("The display \"test\" is incorrect.", message(params));
+                assertEquals("Bicarbonate [Moles/volume] in Serum", display(params));
+        }
+
+        @Test
+        void shouldValidateCodePostWithCodeableConcept() {
+                when(codeSystemService.validateCode("http://example.org", "code", null, "test"))
+                                .thenReturn(new ValidateCodeResult(true, null, "test"));
+
+                Parameters input = params("url", "http://example.org");
+                input.addParameter("codeableConcept", new CodeableConcept().addCoding(new Coding("http://example.org", "code", "test")));
+
+                var response = controller.validateCode(input);
+
+                assertEquals(200, response.getStatusCode().value());
+                assertTrue(result((Parameters) response.getBody()));
+        }
+
+        @Test
+        void shouldReturn400WhenPostParametersEmpty() {
+                var response = controller.validateCode(new Parameters());
+
+                assertEquals(400, response.getStatusCode().value());
+        }
+
+        @Test
+        void shouldReturn400WhenPostParametersNull() {
+                var response = controller.validateCode(null);
+
+                assertEquals(400, response.getStatusCode().value());
+        }
+
+        @Test
+        void shouldReturn400WhenCodingSystemDoesNotMatchUrl() {
+                Parameters input = params("url", "http://loinc.org");
+                input.addParameter("coding", new Coding("http://wrong.system.org", "1963-8", null));
+
+                var response = controller.validateCode(input);
+
+                assertEquals(400, response.getStatusCode().value());
+        }
+
+        @Test
+        void shouldReturn400WhenCodeSystemParameterProvided() {
+                Parameters input = new Parameters();
+                input.addParameter().setName("codeSystem").setResource(new CodeSystem());
+                input.addParameter("code", new CodeType("CODE-1"));
+
+                var response = controller.validateCode(input);
+
+                assertEquals(400, response.getStatusCode().value());
+                assertTrue(((OperationOutcome) response.getBody()).getIssueFirstRep().getDiagnostics().contains("codeSystem"));
+                verify(codeSystemService, never()).validateCode(any(), any(), any(), any());
+        }
+
+        @Test
+        void shouldReturn400WhenCodingAndCodeableConceptBothProvided() {
+                Parameters input = params("url", "http://example.org");
+                input.addParameter("coding", new Coding("http://example.org", "code1", null));
+                input.addParameter("codeableConcept", new CodeableConcept().addCoding(new Coding("http://example.org", "code2", null)));
+
+                var response = controller.validateCode(input);
+
+                assertEquals(400, response.getStatusCode().value());
+                verify(codeSystemService, never()).validateCode(any(), any(), any(), any());
+        }
+
+        private static Parameters params(String name, String value) {
+                Parameters p = new Parameters();
+                p.addParameter(name, new UriType(value));
+                return p;
+        }
+
+        private static boolean result(Parameters params) {
+                return ((BooleanType) params.getParameter("result").getValue()).getValue();
+        }
+
+        private static String display(Parameters params) {
+                var p = params.getParameter("display");
+                return p != null ? ((StringType) p.getValue()).getValue() : null;
+        }
+
+        private static String message(Parameters params) {
+                var p = params.getParameter("message");
+                return p != null ? ((StringType) p.getValue()).getValue() : null;
         }
 }

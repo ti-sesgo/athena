@@ -33,7 +33,7 @@ spring:
         show_sql: false
 
     cache:
-      cache-names: concepts
+      cache-names: concepts, codeSystem
       caffeine:
         spec: maximumSize=1000,expireAfterAccess=2h
 
@@ -43,6 +43,7 @@ spring:
     baseline-on-migrate: true
 
 athena:
+  server-base-url: ${SERVER_BASE_URL:https://terminologias.saude.go.gov.br/fhir}
   landing-page:
     enabled: true
   packages:
