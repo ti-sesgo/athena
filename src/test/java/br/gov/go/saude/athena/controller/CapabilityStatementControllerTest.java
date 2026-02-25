@@ -30,7 +30,25 @@ class CapabilityStatementControllerTest {
                                 .accept("application/fhir+json"))
                                 .andExpect(status().isOk())
                                 .andExpect(content().contentType("application/fhir+json;charset=UTF-8"))
-                                .andExpect(jsonPath("$.resourceType").value("CapabilityStatement"));
+                                .andExpect(jsonPath("$.resourceType").value("CapabilityStatement"))
+                                .andExpect(jsonPath("$.implementation").exists())
+                                .andExpect(jsonPath("$.implementation.description").exists())
+                                .andExpect(jsonPath("$.description").exists())
+                                .andExpect(jsonPath("$.instantiates[0]").value("http://hl7.org/fhir/terminology-server"))
+                                .andExpect(jsonPath("$.rest[0].documentation").value("RESTful Terminology Server"))
+                                .andExpect(jsonPath("$.rest[0].resource[0].searchParam[0].name").value("url"));
+        }
+
+        @Test
+        void shouldReturnTerminologyCapabilitiesWhenModeTerminology() throws Exception {
+                mockMvc.perform(get("/fhir/metadata")
+                                .param("mode", "terminology")
+                                .accept("application/fhir+json"))
+                                .andExpect(status().isOk())
+                                .andExpect(content().contentType("application/fhir+json;charset=UTF-8"))
+                                .andExpect(jsonPath("$.resourceType").value("TerminologyCapabilities"))
+                                .andExpect(jsonPath("$.implementation").exists())
+                                .andExpect(jsonPath("$.validateCode").exists());
         }
 
         @Test
