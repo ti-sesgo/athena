@@ -870,7 +870,7 @@
         <div class="playground-header">
           <h2>
             <svg width="18" height="18" fill="white">
-              <use href="#icon-check" />
+              <use href="#icon-code" />
             </svg>
             Validar Código — $validate-code
           </h2>
@@ -907,7 +907,7 @@
             </div>
             <div class="form-group">
               <label>Display (opcional)</label>
-              <input type="text" id="input-vc-display" value="TAX" placeholder="Ex: TAX" oninput="updateVcPreview()">
+              <input type="text" id="input-vc-display" placeholder="Ex: TAX ID number" oninput="updateVcPreview()">
             </div>
             <div class="form-group">
               <label>Version (opcional)</label>
@@ -1231,7 +1231,7 @@
       };
 
       if (!vals.url || !vals.code) {
-        showResult(els, 400, { error: 'Preencha url e code.' }, 0, true);
+        showResult(els, 400, 'Preencha url e code.', 0, true);
         return;
       }
 
