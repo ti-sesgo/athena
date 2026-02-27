@@ -10,14 +10,19 @@ O servidor de terminologias FHIR mais rápido e simples do mundo!
 
 Serviço disponível na url base: https://terminologias.saude.go.gov.br/fhir
 
-Exemplo de requisição: 
+Exemplos de requisição:
 
-- Operação $lookup
-- system = http://www.saude.gov.br/fhir/r4/CodeSystem/BRCID10
-- code = A90
+**Operação $lookup** — system = http://www.saude.gov.br/fhir/r4/CodeSystem/BRCID10, code = A90
 
 ```sh
-curl -X GET "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?system=http://www.saude.gov.br/fhir/r4/CodeSystem/BRCID10&code=A90&_format=json" \
+curl -X GET "https://terminologias.saude.go.gov.br/fhir/CodeSystem/\$lookup?system=http://www.saude.gov.br/fhir/r4/CodeSystem/BRCID10&code=A90&_format=json" \
+  -H "Accept: application/fhir+json"
+```
+
+**Operação $validate-code** — url = http://terminology.hl7.org/CodeSystem/v2-0203, code = TAX
+
+```sh
+curl -X GET "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$validate-code?url=http://terminology.hl7.org/CodeSystem/v2-0203&code=TAX&_format=json" \
   -H "Accept: application/fhir+json"
 ```
 
@@ -49,6 +54,8 @@ curl "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?system=...&c
 | **Expand**               | `POST /ValueSet/$expand`            | Expande um ValueSet fornecido no corpo da requisição                                                              | ✅ SHALL          | ❌ Não implementado |
 | **Lookup**               | `GET /CodeSystem/$lookup`           | Retorna informações sobre um código específico (display, propriedades, designações)                               | ✅ SHALL          | ✅ Implementado      |
 | **Lookup**               | `POST /CodeSystem/$lookup`          | Retorna informações sobre um código usando Parameters (system+code ou Coding) no corpo da requisição              | ✅ SHALL          | ✅ Implementado      |
+| **Validate Code**        | `GET /CodeSystem/$validate-code`    | Valida se um código pertence ao CodeSystem (url+code+display opcional)                                            | ✅ SHALL          | ✅ Implementado      |
+| **Validate Code**        | `POST /CodeSystem/$validate-code`   | Valida um código usando Parameters (url+code ou coding) no corpo da requisição                                    | ✅ SHALL          | ✅ Implementado      |
 | **Validate Code**        | `GET /ValueSet/{id}/$validate-code` | Valida se um código pertence a um ValueSet específico                                                             | ✅ SHALL          | ❌ Não implementado |
 | **Validate Code**        | `POST /ValueSet/$validate-code`     | Valida um CodeableConcept contra um ValueSet                                                                      | ✅ SHALL          | ❌ Não implementado |
 | **Translate**            | `GET /ConceptMap/$translate`        | Traduz um código de um ValueSet para outro usando ConceptMap                                                      | ✅ SHALL          | ❌ Não implementado |

@@ -864,6 +864,84 @@
           </div>
         </div>
       </div>
+
+      <!-- Validate Code Playground -->
+      <div class="playground-card" style="margin-top: 1.5rem;">
+        <div class="playground-header">
+          <h2>
+            <svg width="18" height="18" fill="white">
+              <use href="#icon-check" />
+            </svg>
+            Validar Código — $validate-code
+          </h2>
+        </div>
+        <div class="playground-body">
+          <div class="toggle-row">
+            <div>
+              <span class="toggle-label">Método</span>
+              <div class="toggle-group">
+                <button id="btn-vc-get" class="active-get" onclick="setVcMethod('GET')">GET</button>
+                <button id="btn-vc-post" onclick="setVcMethod('POST')">POST</button>
+              </div>
+            </div>
+            <div>
+              <span class="toggle-label">Formato da Resposta</span>
+              <div class="toggle-group">
+                <button id="btn-vc-json" class="active-fmt" onclick="setVcFormat('json')">JSON</button>
+                <button id="btn-vc-xml" onclick="setVcFormat('xml')">XML</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group" style="flex:2;">
+              <label>URL (CodeSystem)</label>
+              <input type="text" id="input-vc-url" value="http://terminology.hl7.org/CodeSystem/v2-0203" placeholder="Ex: http://terminology.hl7.org/CodeSystem/v2-0203"
+                oninput="updateVcPreview()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Code</label>
+              <input type="text" id="input-vc-code" value="TAX" placeholder="Ex: TAX" oninput="updateVcPreview()">
+            </div>
+            <div class="form-group">
+              <label>Display (opcional)</label>
+              <input type="text" id="input-vc-display" value="TAX" placeholder="Ex: TAX" oninput="updateVcPreview()">
+            </div>
+            <div class="form-group">
+              <label>Version (opcional)</label>
+              <input type="text" id="input-vc-version" placeholder="Ex: 1.0.0" oninput="updateVcPreview()">
+            </div>
+          </div>
+
+          <div class="dark-panel" id="preview-vc-panel">
+            <div class="dark-panel-header"><span id="preview-vc-label">REQUEST</span></div>
+            <div class="dark-panel-body" id="preview-vc-content"></div>
+          </div>
+
+          <button class="btn-run" id="btn-vc-run" onclick="executeValidateCode()">
+            <svg width="16" height="16" fill="currentColor">
+              <use href="#icon-play" />
+            </svg>
+            Executar
+          </button>
+
+          <div class="result-panel" id="result-vc-panel">
+            <div class="result-bar">
+              <div class="result-status">
+                <span class="dot" id="result-vc-dot"></span>
+                <span id="result-vc-status-text"></span>
+              </div>
+              <div style="display:flex;align-items:center;gap:1rem;">
+                <span id="result-vc-timestamp" style="color:var(--dark-muted)"></span>
+                <span id="result-vc-time" style="color:#A6E3A1;font-weight:600"></span>
+              </div>
+            </div>
+            <div class="result-body" id="result-vc-body"></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Operations Table (data-driven) -->
@@ -926,6 +1004,8 @@
     const OPERATIONS = [
       ['Lookup', 'GET', '/CodeSystem/$lookup', 'SHALL', true],
       ['Lookup', 'POST', '/CodeSystem/$lookup', 'SHALL', true],
+      ['Validate Code', 'GET', '/CodeSystem/$validate-code', 'SHALL', true],
+      ['Validate Code', 'POST', '/CodeSystem/$validate-code', 'SHALL', true],
       ['Expand', 'GET', '/ValueSet/{id}/$expand', 'SHALL', false],
       ['Expand', 'POST', '/ValueSet/$expand', 'SHALL', false],
       ['Validate Code', 'GET', '/ValueSet/{id}/$validate-code', 'SHALL', false],
@@ -1008,6 +1088,8 @@
     const BASE = window.location.origin + window.location.pathname.replace(/\/$/, '');
     let currentMethod = 'GET';
     let currentFormat = 'json';
+    let vcMethod = 'GET';
+    let vcFormat = 'json';
 
     function setMethod(method) {
       currentMethod = method;
@@ -1068,6 +1150,120 @@
         preview += acceptLine + '\n\n';
         preview += highlightJson(JSON.stringify(payload, null, 2));
         contentEl.innerHTML = preview;
+      }
+    }
+
+    function setVcMethod(method) {
+      vcMethod = method;
+      document.getElementById('btn-vc-get').className = method === 'GET' ? 'active-get' : '';
+      document.getElementById('btn-vc-post').className = method === 'POST' ? 'active-post' : '';
+      updateVcPreview();
+    }
+
+    function setVcFormat(fmt) {
+      vcFormat = fmt;
+      document.getElementById('btn-vc-json').className = fmt === 'json' ? 'active-fmt' : '';
+      document.getElementById('btn-vc-xml').className = fmt === 'xml' ? 'active-fmt' : '';
+      updateVcPreview();
+    }
+
+    function getVcFormValues() {
+      return {
+        url: document.getElementById('input-vc-url').value.trim(),
+        code: document.getElementById('input-vc-code').value.trim(),
+        display: document.getElementById('input-vc-display').value.trim(),
+        version: document.getElementById('input-vc-version').value.trim()
+      };
+    }
+
+    function getVcAcceptHeader() {
+      return vcFormat === 'json' ? 'application/fhir+json' : 'application/fhir+xml';
+    }
+
+    function buildVcReadableUrl(url, code, display, version) {
+      let u = BASE + '/CodeSystem/$validate-code?url=' + encodeURIComponent(url) + '&code=' + encodeURIComponent(code);
+      if (display) u += '&display=' + encodeURIComponent(display);
+      if (version) u += '&version=' + encodeURIComponent(version);
+      return u + '&_format=' + vcFormat;
+    }
+
+    function buildVcPostPayload(url, code, display, version) {
+      const params = [
+        { name: 'url', valueUri: url },
+        { name: 'code', valueCode: code }
+      ];
+      if (display) params.push({ name: 'display', valueString: display });
+      if (version) params.push({ name: 'version', valueString: version });
+      return { resourceType: 'Parameters', parameter: params };
+    }
+
+    function updateVcPreview() {
+      const vals = getVcFormValues();
+      const labelEl = document.getElementById('preview-vc-label');
+      const contentEl = document.getElementById('preview-vc-content');
+      const acceptLine = '<span style="color:var(--dark-muted)">Accept: ' + getVcAcceptHeader() + '</span>';
+
+      if (vcMethod === 'GET') {
+        labelEl.textContent = 'GET REQUEST';
+        contentEl.innerHTML = '<span class="preview-method-get">GET</span> <span class="preview-url">' + esc(buildVcReadableUrl(vals.url, vals.code, vals.display, vals.version)) + '</span>\n' + acceptLine;
+      } else {
+        labelEl.textContent = 'POST REQUEST';
+        const postUrl = BASE + '/CodeSystem/$validate-code?_format=' + vcFormat;
+        const payload = buildVcPostPayload(vals.url, vals.code, vals.display, vals.version);
+        let preview = '<span class="preview-method-post">POST</span> <span class="preview-url">' + esc(postUrl) + '</span>\n';
+        preview += '<span style="color:var(--dark-muted)">Content-Type: application/fhir+json</span>\n';
+        preview += acceptLine + '\n\n';
+        preview += highlightJson(JSON.stringify(payload, null, 2));
+        contentEl.innerHTML = preview;
+      }
+    }
+
+    async function executeValidateCode() {
+      const vals = getVcFormValues();
+      const btn = document.getElementById('btn-vc-run');
+      const els = {
+        panel: document.getElementById('result-vc-panel'),
+        body: document.getElementById('result-vc-body'),
+        dot: document.getElementById('result-vc-dot'),
+        status: document.getElementById('result-vc-status-text'),
+        time: document.getElementById('result-vc-time'),
+        timestamp: document.getElementById('result-vc-timestamp')
+      };
+
+      if (!vals.url || !vals.code) {
+        showResult(els, 400, { error: 'Preencha url e code.' }, 0, true);
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Executando...';
+
+      const t0 = performance.now();
+      try {
+        let response;
+        if (vcMethod === 'GET') {
+          const params = new URLSearchParams({ url: vals.url, code: vals.code, _format: vcFormat });
+          if (vals.display) params.append('display', vals.display);
+          if (vals.version) params.append('version', vals.version);
+          response = await fetch(BASE + '/CodeSystem/$validate-code?' + params.toString(), {
+            headers: { 'Accept': getVcAcceptHeader() }
+          });
+        } else {
+          response = await fetch(BASE + '/CodeSystem/$validate-code?_format=' + vcFormat, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/fhir+json', 'Accept': getVcAcceptHeader() },
+            body: JSON.stringify(buildVcPostPayload(vals.url, vals.code, vals.display, vals.version))
+          });
+        }
+        const elapsed = Math.round(performance.now() - t0);
+        const ct = response.headers.get('content-type') || '';
+        const data = ct.includes('xml') ? await response.text() : await response.json();
+        showResult(els, response.status, data, elapsed, !response.ok);
+      } catch (err) {
+        showResult(els, 0, { error: err.message }, Math.round(performance.now() - t0), true);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" fill="currentColor"><use href="#icon-play"/></svg> Executar';
       }
     }
 
@@ -1175,8 +1371,12 @@
     renderOperations();
     renderPackages();
     updatePreview();
+    updateVcPreview();
     document.querySelectorAll('#input-system, #input-code, #input-version').forEach(el => {
       el.addEventListener('keydown', e => { if (e.key === 'Enter') executeLookup(); });
+    });
+    document.querySelectorAll('#input-vc-url, #input-vc-code, #input-vc-display, #input-vc-version').forEach(el => {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') executeValidateCode(); });
     });
   </script>
 
