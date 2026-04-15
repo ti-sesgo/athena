@@ -35,4 +35,8 @@ build/
 ### IntelliJ ###
 .idea/
 
+### Claude Code ###
+.claude/
+CLAUDE.local.md
+
 
