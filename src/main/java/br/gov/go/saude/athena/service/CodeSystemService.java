@@ -203,12 +203,24 @@ public class CodeSystemService {
         }
 
         String recommendedDisplay = concept.get().getDisplay();
-        if (StringUtils.hasText(requestDisplay) && !requestDisplay.equals(recommendedDisplay)) {
+        if (StringUtils.hasText(requestDisplay) && !displayMatches(requestDisplay, recommendedDisplay)) {
             return new ValidateCodeResult(false,
                     "The display \"" + requestDisplay + "\" is incorrect.",
                     recommendedDisplay);
         }
         return new ValidateCodeResult(true, null, recommendedDisplay);
+    }
+
+    /**
+     * Comparação leniente de display conforme FHIR R4 (case-insensitive, com trim).
+     *
+     * @see <a href="https://hl7.org/fhir/R4/codesystem-operation-validate-code.html">CodeSystem $validate-code</a>
+     */
+    private static boolean displayMatches(String requestDisplay, String recommendedDisplay) {
+        if (recommendedDisplay == null) {
+            return false;
+        }
+        return requestDisplay.trim().equalsIgnoreCase(recommendedDisplay.trim());
     }
 
     private List<Parameters.ParametersParameterComponent> toParametersParameter(
