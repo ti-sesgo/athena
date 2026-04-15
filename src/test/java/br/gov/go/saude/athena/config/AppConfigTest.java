@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class AppConfigTest {
 
     @Test
-    void deveConfigurarFhirContextR4() {
+    void shouldConfigureFhirContextAsR4() {
         FhirContext context = FhirContext.forR4();
         
         assertNotNull(context);
@@ -21,7 +21,7 @@ class AppConfigTest {
     }
 
     @Test
-    void deveParsearCodeSystemJson() {
+    void shouldParseCodeSystemJsonWithFhirParser() {
         FhirContext context = FhirContext.forR4();
         IParser parser = context.newJsonParser();
         

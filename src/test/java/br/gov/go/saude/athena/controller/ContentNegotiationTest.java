@@ -126,14 +126,14 @@ class ContentNegotiationTest {
     // negotiation.
     // However, if no handler supports text/plain, Spring usually returns 406.
     @Test
-    void shouldReturn406ForUnsupportedAcceptHeader() throws Exception {
+    void shouldReturnNotAcceptableWhenAcceptHeaderIsUnsupported() throws Exception {
         mockMvc.perform(get("/fhir/metadata")
                 .accept(MediaType.TEXT_PLAIN))
                 .andExpect(status().isNotAcceptable());
     }
 
     @Test
-    void shouldReturn404JsonWhenRequestingNonExistentResourceWithHtmlAccept() throws Exception {
+    void shouldReturnNotFoundAsJsonWhenResourceMissingAndAcceptIsHtml() throws Exception {
         // This simulates a browser request (Accept: text/html) to a non-existent
         // endpoint.
         // It should return 404 (not 406) and the OperationOutcome in

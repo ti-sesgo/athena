@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class DomainModelTest {
 
         @Test
-        void deveCriarPackageCompleto() {
+        void shouldBuildCompletePackageEntity() {
                 PackageEntity pkg = PackageEntity.builder()
                                 .packageId("hl7.fhir.r4.core")
                                 .version("4.0.1")
@@ -30,7 +30,7 @@ class DomainModelTest {
         }
 
         @Test
-        void deveCriarCodeSystemComStatus() {
+        void shouldBuildCodeSystemEntityWithStatus() {
                 PackageEntity pkg = PackageEntity.builder()
                                 .packageId("test")
                                 .version("1.0")
@@ -59,7 +59,7 @@ class DomainModelTest {
         }
 
         @Test
-        void deveCriarConceitoCompleto() {
+        void shouldBuildCompleteConceptEntity() {
                 PackageEntity pkg = PackageEntity.builder()
                                 .packageId("test")
                                 .version("1.0")
@@ -97,7 +97,7 @@ class DomainModelTest {
         }
 
         @Test
-        void deveSimularFluxoCompletoDeLookup() {
+        void shouldResolveDisplayWhenSimulatingLookupFlow() {
                 // 1. Package carregado
                 PackageEntity pkg = PackageEntity.builder()
                                 .packageId("hl7.fhir.r4.core")
@@ -141,7 +141,7 @@ class DomainModelTest {
         }
 
         @Test
-        void deveValidarStatusTransitions() {
+        void shouldAllowStatusTransitionFromDraftToActive() {
                 // DRAFT → ACTIVE
                 CodeSystemEntity draft = CodeSystemEntity.builder()
                                 .resourceId("test-cs")

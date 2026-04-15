@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ConceptEntityTest {
 
     @Test
-    void testGetPropertyDeserializesJsonCorrectly() {
+    void shouldDeserializePropertyJsonCorrectly() {
         ConceptEntity entity = new ConceptEntity();
 
         String json = """
@@ -84,7 +84,7 @@ class ConceptEntityTest {
     }
 
     @Test
-    void testSetPropertySerializesToJsonCorrectly() {
+    void shouldSerializePropertyToJsonCorrectly() {
         ConceptEntity entity = new ConceptEntity();
 
         List<CodeSystem.ConceptPropertyComponent> properties = new ArrayList<>();
@@ -131,7 +131,7 @@ class ConceptEntityTest {
     }
 
     @Test
-    void testGetPropertyWithNullOrEmptyJson() {
+    void shouldReturnEmptyPropertyListWhenJsonIsNullOrBlank() {
         ConceptEntity entity = new ConceptEntity();
         entity.setPropertyJson(null);
         assertTrue(entity.getProperty().isEmpty());
@@ -141,7 +141,7 @@ class ConceptEntityTest {
     }
 
     @Test
-    void testSetPropertyWithNullOrEmptyList() {
+    void shouldKeepPropertyJsonNullWhenListIsNullOrEmpty() {
         ConceptEntity entity = new ConceptEntity();
         entity.setProperty(null);
         assertNull(entity.getPropertyJson());
@@ -151,7 +151,7 @@ class ConceptEntityTest {
     }
 
     @Test
-    void testGetDesignationDeserializesJsonCorrectly() {
+    void shouldDeserializeDesignationJsonCorrectly() {
         ConceptEntity entity = new ConceptEntity();
 
         String json = """
@@ -182,7 +182,7 @@ class ConceptEntityTest {
     }
 
     @Test
-    void testSetDesignationSerializesToJsonCorrectly() {
+    void shouldSerializeDesignationToJsonCorrectly() {
         ConceptEntity entity = new ConceptEntity();
 
         List<CodeSystem.ConceptDefinitionDesignationComponent> designations = new ArrayList<>();
@@ -209,7 +209,7 @@ class ConceptEntityTest {
     }
 
     @Test
-    void testGetDesignationWithNullOrEmptyJson() {
+    void shouldReturnEmptyDesignationListWhenJsonIsNullOrBlank() {
         ConceptEntity entity = new ConceptEntity();
         entity.setDesignationJson(null);
         assertTrue(entity.getDesignation().isEmpty());
@@ -219,7 +219,7 @@ class ConceptEntityTest {
     }
 
     @Test
-    void testSetDesignationWithNullOrEmptyList() {
+    void shouldKeepDesignationJsonNullWhenListIsNullOrEmpty() {
         ConceptEntity entity = new ConceptEntity();
         entity.setDesignation(null);
         assertNull(entity.getDesignationJson());

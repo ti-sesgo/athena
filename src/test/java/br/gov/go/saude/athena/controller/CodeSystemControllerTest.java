@@ -457,7 +457,7 @@ class CodeSystemControllerTest {
         }
 
         @Test
-        void shouldReturn400WhenUrlMissing() {
+        void shouldReturnBadRequestWhenUrlMissing() {
                 var response = controller.validateCode(null, "code", null, null);
 
                 assertEquals(400, response.getStatusCode().value());
@@ -465,7 +465,7 @@ class CodeSystemControllerTest {
         }
 
         @Test
-        void shouldReturn400WhenCodeMissing() {
+        void shouldReturnBadRequestWhenCodeMissing() {
                 var response = controller.validateCode("http://test.com/cs", null, null, null);
 
                 assertEquals(400, response.getStatusCode().value());
@@ -537,21 +537,21 @@ class CodeSystemControllerTest {
         }
 
         @Test
-        void shouldReturn400WhenPostParametersEmpty() {
+        void shouldReturnBadRequestWhenPostParametersEmpty() {
                 var response = controller.validateCode(new Parameters());
 
                 assertEquals(400, response.getStatusCode().value());
         }
 
         @Test
-        void shouldReturn400WhenPostParametersNull() {
+        void shouldReturnBadRequestWhenPostParametersNull() {
                 var response = controller.validateCode(null);
 
                 assertEquals(400, response.getStatusCode().value());
         }
 
         @Test
-        void shouldReturn400WhenCodingSystemDoesNotMatchUrl() {
+        void shouldReturnBadRequestWhenCodingSystemDoesNotMatchUrl() {
                 Parameters input = params("url", "http://loinc.org");
                 input.addParameter("coding", new Coding("http://wrong.system.org", "1963-8", null));
 
@@ -561,7 +561,7 @@ class CodeSystemControllerTest {
         }
 
         @Test
-        void shouldReturn400WhenCodeSystemParameterProvided() {
+        void shouldReturnBadRequestWhenCodeSystemParameterProvided() {
                 Parameters input = new Parameters();
                 input.addParameter().setName("codeSystem").setResource(new CodeSystem());
                 input.addParameter("code", new CodeType("CODE-1"));
@@ -574,7 +574,7 @@ class CodeSystemControllerTest {
         }
 
         @Test
-        void shouldReturn400WhenCodingAndCodeableConceptBothProvided() {
+        void shouldReturnBadRequestWhenCodingAndCodeableConceptBothProvided() {
                 Parameters input = params("url", "http://example.org");
                 input.addParameter("coding", new Coding("http://example.org", "code1", null));
                 input.addParameter("codeableConcept", new CodeableConcept().addCoding(new Coding("http://example.org", "code2", null)));

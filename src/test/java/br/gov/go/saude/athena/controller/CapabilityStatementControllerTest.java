@@ -52,7 +52,7 @@ class CapabilityStatementControllerTest {
         }
 
         @Test
-        void shouldReturn405WhenMethodNotAllowed() throws Exception {
+        void shouldReturnMethodNotAllowedWhenMetadataReceivesPost() throws Exception {
                 mockMvc.perform(post("/fhir/metadata")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content("{}"))

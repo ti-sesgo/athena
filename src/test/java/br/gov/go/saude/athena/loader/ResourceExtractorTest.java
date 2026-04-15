@@ -23,7 +23,7 @@ class ResourceExtractorTest {
     }
 
     @Test
-    void deveRetornarListaVaziaQuandoPackageInvalido() {
+    void shouldThrowIOExceptionWhenExtractingCodeSystemsFromInvalidPackage() {
         byte[] invalidPackage = "invalid".getBytes();
 
         // Deve retornar lista vazia, não lançar exceção
@@ -31,7 +31,7 @@ class ResourceExtractorTest {
     }
 
     @Test
-    void deveExtrairTodasTerminologiasEmParalelo() {
+    void shouldReturnEmptyTerminologiesWhenPackageIsInvalid() {
         byte[] invalidPackage = "invalid".getBytes();
 
         // extractAllTerminologies trata erros internamente
@@ -49,7 +49,7 @@ class ResourceExtractorTest {
     }
 
     @Test
-    void deveRetornarObjetoComListasVazias() {
+    void shouldReturnEmptyListsWhenPackageBytesAreNotTgz() {
         byte[] invalidPackage = "not a valid tgz".getBytes();
 
         ResourceExtractor.TerminologyResources result = extractor.extractAllTerminologies(invalidPackage);
@@ -61,7 +61,7 @@ class ResourceExtractorTest {
     }
 
     @Test
-    void deveExtrairTudoEmParalelo() throws IOException {
+    void shouldExtractAllTerminologiesInParallelWithoutFailing() throws IOException {
         // Mock do conteúdo do pacote
         byte[] packageBytes = "dummy content".getBytes();
 
@@ -78,7 +78,7 @@ class ResourceExtractorTest {
     }
 
     @Test
-    void metodoExtractDeveSerGenerico() throws IOException {
+    void shouldThrowIOExceptionWhenGenericExtractReceivesInvalidPackage() throws IOException {
         byte[] invalidPackage = "invalid".getBytes();
 
         // extract genérico deve lançar IOException para package inválido

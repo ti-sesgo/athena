@@ -16,7 +16,7 @@ class LocalPackageEntitySourceTest {
     private static final String PACKAGE_PATH = "src/test/resources/package.tgz";
 
     @Test
-    void deveExtrairMetadadosDoPackageReal() {
+    void shouldExtractMetadataFromRealPackage() {
         Path packagePath = Paths.get(PACKAGE_PATH).toAbsolutePath();
         LocalPackageSource source = new LocalPackageSource(packagePath.toString());
 
@@ -25,7 +25,7 @@ class LocalPackageEntitySourceTest {
     }
 
     @Test
-    void deveCarregarPackageReal() throws IOException {
+    void shouldLoadRealPackageBytes() throws IOException {
         Path packagePath = Paths.get(PACKAGE_PATH).toAbsolutePath();
         LocalPackageSource source = new LocalPackageSource(packagePath.toString());
 
@@ -36,7 +36,7 @@ class LocalPackageEntitySourceTest {
     }
 
     @Test
-    void deveLancarExcecaoSeArquivoNaoExiste() {
+    void shouldThrowIOExceptionWhenFileDoesNotExist() {
         LocalPackageSource source = new LocalPackageSource("/path/to/nonexistent.tgz");
 
         assertThrows(IOException.class, source::load);

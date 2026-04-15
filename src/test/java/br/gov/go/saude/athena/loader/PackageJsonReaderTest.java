@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class PackageJsonReaderTest {
 
   @Test
-  void parseMetadataValid() {
+  void shouldParseCompleteMetadataWhenPackageJsonIsValid() {
     String packageJson = """
         {
           "version" : "1.0.0",
@@ -80,7 +80,7 @@ class PackageJsonReaderTest {
   }
 
   @Test
-  void parseBasicInfoValid() {
+  void shouldParseBasicInfoWhenPackageJsonIsValid() {
     String packageJson = """
         {
           "version" : "1.0.0",
@@ -99,7 +99,7 @@ class PackageJsonReaderTest {
   }
 
   @Test
-  void deveParsearPackageJsonBasicInfo() throws Exception {
+  void shouldReadBasicInfoFromRealPackageTgz() throws Exception {
     byte[] packageBytes = Util.loadResource("package.tgz");
 
     var basicInfo = PackageJsonReader.readBasicInfo(packageBytes);
@@ -110,7 +110,7 @@ class PackageJsonReaderTest {
   }
 
   @Test
-  void deveLancarExcecaoParaPackageInvalido() {
+  void shouldThrowIOExceptionWhenPackageBytesAreInvalid() {
     byte[] invalidPackage = "invalid".getBytes();
 
     assertThrows(IOException.class, () -> PackageJsonReader.readBasicInfo(invalidPackage));
