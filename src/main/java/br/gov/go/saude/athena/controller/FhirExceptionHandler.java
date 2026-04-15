@@ -1,10 +1,12 @@
 package br.gov.go.saude.athena.controller;
 
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 import org.hl7.fhir.r4.model.OperationOutcome;
 import org.hl7.fhir.r4.model.CodeableConcept;
 import ca.uhn.fhir.parser.DataFormatException;
@@ -61,6 +63,48 @@ public class FhirExceptionHandler {
 
     return ResponseEntity
         .status(HttpStatus.NOT_FOUND)
+        .contentType(MediaType.parseMediaType("application/fhir+json"))
+        .body(outcome);
+  }
+
+  @ExceptionHandler(ResponseStatusException.class)
+  public ResponseEntity<OperationOutcome> handleResponseStatusException(ResponseStatusException e) {
+    HttpStatus status = HttpStatus.valueOf(e.getStatusCode().value());
+    OperationOutcome.IssueType code = switch (status.series()) {
+      case CLIENT_ERROR -> status == HttpStatus.NOT_FOUND
+              ? OperationOutcome.IssueType.NOTFOUND
+              : OperationOutcome.IssueType.INVALID;
+      case SERVER_ERROR -> OperationOutcome.IssueType.EXCEPTION;
+      default -> OperationOutcome.IssueType.PROCESSING;
+    };
+    OperationOutcome.IssueSeverity severity = status.is5xxServerError()
+            ? OperationOutcome.IssueSeverity.FATAL
+            : OperationOutcome.IssueSeverity.ERROR;
+
+    OperationOutcome outcome = new OperationOutcome();
+    outcome.addIssue()
+        .setSeverity(severity)
+        .setCode(code)
+        .setDiagnostics(e.getReason() != null ? e.getReason() : e.getMessage())
+        .setDetails(new CodeableConcept().setText(status.getReasonPhrase()));
+
+    return ResponseEntity
+        .status(status)
+        .contentType(MediaType.parseMediaType("application/fhir+json"))
+        .body(outcome);
+  }
+
+  @ExceptionHandler(IncorrectResultSizeDataAccessException.class)
+  public ResponseEntity<OperationOutcome> handleIncorrectResultSize(IncorrectResultSizeDataAccessException e) {
+    OperationOutcome outcome = new OperationOutcome();
+    outcome.addIssue()
+        .setSeverity(OperationOutcome.IssueSeverity.ERROR)
+        .setCode(OperationOutcome.IssueType.MULTIPLEMATCHES)
+        .setDiagnostics("Multiple resources matched the query; expected unique result.")
+        .setDetails(new CodeableConcept().setText("Ambiguous query result."));
+
+    return ResponseEntity
+        .status(HttpStatus.CONFLICT)
         .contentType(MediaType.parseMediaType("application/fhir+json"))
         .body(outcome);
   }

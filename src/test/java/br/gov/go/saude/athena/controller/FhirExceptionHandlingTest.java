@@ -6,9 +6,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.Collections;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -75,6 +77,46 @@ class FhirExceptionHandlingTest {
         assertEquals(OperationOutcome.IssueSeverity.ERROR, outcome.getIssueFirstRep().getSeverity());
         assertEquals(OperationOutcome.IssueType.NOTFOUND, outcome.getIssueFirstRep().getCode());
         assertEquals("Resource or endpoint not found.", outcome.getIssueFirstRep().getDetails().getText());
+    }
+
+    @Test
+    void shouldMapResponseStatusExceptionToSameHttpStatusAndIssueNotFound() {
+        ResponseStatusException exception = new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "CodeSystem not found: unknown");
+
+        ResponseEntity<OperationOutcome> response = handler.handleResponseStatusException(exception);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("application/fhir+json", response.getHeaders().getContentType().toString());
+        OperationOutcome outcome = response.getBody();
+        assertNotNull(outcome);
+        assertEquals(OperationOutcome.IssueSeverity.ERROR, outcome.getIssueFirstRep().getSeverity());
+        assertEquals(OperationOutcome.IssueType.NOTFOUND, outcome.getIssueFirstRep().getCode());
+        assertEquals("CodeSystem not found: unknown", outcome.getIssueFirstRep().getDiagnostics());
+    }
+
+    @Test
+    void shouldMapResponseStatusExceptionBadRequestToIssueInvalid() {
+        ResponseStatusException exception = new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Parameter 'url' missing");
+
+        ResponseEntity<OperationOutcome> response = handler.handleResponseStatusException(exception);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(OperationOutcome.IssueType.INVALID, response.getBody().getIssueFirstRep().getCode());
+    }
+
+    @Test
+    void shouldMapIncorrectResultSizeToConflictWithMultipleMatches() {
+        IncorrectResultSizeDataAccessException exception = new IncorrectResultSizeDataAccessException(1, 2);
+
+        ResponseEntity<OperationOutcome> response = handler.handleIncorrectResultSize(exception);
+
+        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
+        assertEquals("application/fhir+json", response.getHeaders().getContentType().toString());
+        OperationOutcome outcome = response.getBody();
+        assertNotNull(outcome);
+        assertEquals(OperationOutcome.IssueType.MULTIPLEMATCHES, outcome.getIssueFirstRep().getCode());
     }
 
     @Test
