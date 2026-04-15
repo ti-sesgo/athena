@@ -80,7 +80,7 @@ curl "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?system=...&c
 | **Subsumes**             | `POST /CodeSystem/$subsumes`        | Testa relação de subsunção usando Codings                                                                         | MAY              | ❌ Não implementado |
 | **Read CodeSystem**      | `GET /CodeSystem/{id}`              | Recupera um CodeSystem específico por ID                                                                          | MAY              | ✅ Implementado      |
 | **Search CodeSystem**    | `GET /CodeSystem?url={url}`         | Busca CodeSystem por URL canônica                                                                                 | MAY              | ✅ Implementado      |
-| **Search CodeSystem**    | `GET /CodeSystem?name={name}`       | Busca CodeSystem por nome                                                                                         | MAY              | ❌ Não implementado |
+| **Search CodeSystem**    | `GET /CodeSystem?name={name}`       | Busca CodeSystem por nome (starts-with, case-insensitive)                                                         | MAY              | ✅ Implementado      |
 | **Batch Operations**     | `POST /`                            | Executa múltiplas operações de validação ou tradução em lote                                                      | MAY              | ❌ Não implementado |
 
 ### Conformance Verbs (RFC 2119)
