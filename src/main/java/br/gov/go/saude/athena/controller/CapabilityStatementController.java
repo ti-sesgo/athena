@@ -79,6 +79,10 @@ public class CapabilityStatementController {
                 .setName("url")
                 .setType(SearchParamType.URI)
                 .setDocumentation("URL canônica do CodeSystem");
+        codeSystem.addSearchParam()
+                .setName("name")
+                .setType(SearchParamType.STRING)
+                .setDocumentation("Nome do CodeSystem (starts-with, case-insensitive)");
         codeSystem.addOperation()
                 .setName("lookup")
                 .setDefinition(OP_LOOKUP);
