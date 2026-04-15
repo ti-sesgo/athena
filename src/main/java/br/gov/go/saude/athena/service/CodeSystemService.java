@@ -49,6 +49,26 @@ public class CodeSystemService {
         return findByUrl(url).map(this::parseEntity);
     }
 
+    /**
+     * Busca CodeSystems cujo name começa com o prefixo informado (case-insensitive).
+     * <p>
+     * Implementa o search param FHIR R4 <code>name</code> com modifier default
+     * "starts-with, case-insensitive".
+     * </p>
+     *
+     * @see <a href="https://hl7.org/fhir/R4/codesystem.html#search">CodeSystem search</a>
+     */
+    public List<CodeSystem> searchByName(String namePrefix) {
+        if (!StringUtils.hasText(namePrefix)) {
+            return List.of();
+        }
+        return codeSystemRepository
+                .findByActiveTrueAndIsLatestTrueAndNameStartingWithIgnoreCaseOrderByName(namePrefix)
+                .stream()
+                .map(this::parseEntity)
+                .toList();
+    }
+
     private CodeSystem parseEntity(CodeSystemEntity entity) {
         return fhirContext.newJsonParser().parseResource(CodeSystem.class, new String(entity.getContent()));
     }

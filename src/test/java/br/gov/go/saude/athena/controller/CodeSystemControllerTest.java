@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 import org.hl7.fhir.r4.model.OperationOutcome;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -94,7 +95,7 @@ class CodeSystemControllerTest {
                 when(codeSystemService.findResourceByUrl(url)).thenReturn(Optional.of(cs));
 
                 // Act
-                ResponseEntity<IBaseResource> response = controller.getCodeSystemByUrl(url);
+                ResponseEntity<IBaseResource> response = controller.search(url, null);
 
                 // Assert
                 assertEquals(200, response.getStatusCode().value());
@@ -111,6 +112,51 @@ class CodeSystemControllerTest {
                 assertEquals(url, resultCs.getUrl());
                 assertEquals(cs.getName(), resultCs.getName());
                 assertEquals(CodeSystem.CodeSystemContentMode.NOTPRESENT, resultCs.getContent());
+        }
+
+        @Test
+        void shouldSearchCodeSystemByName() {
+                String nameQuery = "LOINC";
+                CodeSystem cs1 = new CodeSystem();
+                cs1.setId("loinc");
+                cs1.setName("LOINC");
+                cs1.setUrl("http://loinc.org");
+                CodeSystem cs2 = new CodeSystem();
+                cs2.setId("loinc-v2");
+                cs2.setName("LOINC2.0");
+                cs2.setUrl("http://loinc.org/v2");
+
+                when(codeSystemService.searchByName(nameQuery)).thenReturn(List.of(cs1, cs2));
+
+                ResponseEntity<IBaseResource> response = controller.search(null, nameQuery);
+
+                assertEquals(200, response.getStatusCode().value());
+                Bundle bundle = (Bundle) response.getBody();
+                assertNotNull(bundle);
+                assertEquals(Bundle.BundleType.SEARCHSET, bundle.getType());
+                assertEquals(2, bundle.getTotal());
+                assertEquals(2, bundle.getEntry().size());
+                assertEquals("LOINC", ((CodeSystem) bundle.getEntry().get(0).getResource()).getName());
+                assertEquals("LOINC2.0", ((CodeSystem) bundle.getEntry().get(1).getResource()).getName());
+        }
+
+        @Test
+        void shouldReturnEmptySearchsetWhenNoCodeSystemMatchesName() {
+                when(codeSystemService.searchByName("inexistente")).thenReturn(List.of());
+
+                ResponseEntity<IBaseResource> response = controller.search(null, "inexistente");
+
+                assertEquals(200, response.getStatusCode().value());
+                Bundle bundle = (Bundle) response.getBody();
+                assertNotNull(bundle);
+                assertEquals(Bundle.BundleType.SEARCHSET, bundle.getType());
+                assertEquals(0, bundle.getTotal());
+                assertTrue(bundle.getEntry().isEmpty());
+        }
+
+        @Test
+        void shouldReturnBadRequestWhenNeitherUrlNorNameProvided() {
+                assertThrows(ResponseStatusException.class, () -> controller.search(null, null));
         }
 
         @Test

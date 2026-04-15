@@ -45,27 +45,36 @@ public class CodeSystemController {
     }
 
     /**
-     * Busca CodeSystem por URL canônica.
-     * <br>
-     * URL: /CodeSystem?url={url}
+     * Busca CodeSystem por URL canônica ou por nome.
+     * <p>
+     * Suporta os search params FHIR R4 <code>url</code> (token canônico) e
+     * <code>name</code> (string, modifier default "starts-with" case-insensitive).
+     * Pelo menos um deve ser informado.
+     * </p>
+     * URL: /CodeSystem?url={url} ou /CodeSystem?name={name}
      */
     @GetMapping
-    public ResponseEntity<IBaseResource> getCodeSystemByUrl(@RequestParam(required = false) String url) {
-        if (url == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Parameter 'url' is required for search.");
+    public ResponseEntity<IBaseResource> search(@RequestParam(required = false) String url,
+                                                @RequestParam(required = false) String name) {
+        if (!StringUtils.hasText(url) && !StringUtils.hasText(name)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Provide at least one of 'url' or 'name' search parameters.");
         }
-        log.debug("Search CodeSystem by URL: {}", url);
 
-        CodeSystem resource = codeSystemService.findResourceByUrl(url)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "CodeSystem with URL " + url + " not found."));
+        log.debug("Search CodeSystem: url={}, name={}", url, name);
 
-        // Wrap in Bundle for search result consistency (implied requirement for
-        // search-like op)
         Bundle bundle = new Bundle();
         bundle.setType(Bundle.BundleType.SEARCHSET);
-        bundle.addEntry().setResource(resource);
-        bundle.setTotal(1);
+
+        if (StringUtils.hasText(url)) {
+            codeSystemService.findResourceByUrl(url)
+                    .ifPresent(cs -> bundle.addEntry().setResource(cs));
+        } else {
+            codeSystemService.searchByName(name)
+                    .forEach(cs -> bundle.addEntry().setResource(cs));
+        }
+
+        bundle.setTotal(bundle.getEntry().size());
 
         return ResponseEntity.ok(bundle);
     }
