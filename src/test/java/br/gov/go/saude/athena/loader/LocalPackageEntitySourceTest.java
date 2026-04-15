@@ -36,9 +36,8 @@ class LocalPackageEntitySourceTest {
     }
 
     @Test
-    void shouldThrowIOExceptionWhenFileDoesNotExist() {
-        LocalPackageSource source = new LocalPackageSource("/path/to/nonexistent.tgz");
-
-        assertThrows(IOException.class, source::load);
+    void shouldThrowIllegalStateWhenFileDoesNotExist() {
+        assertThrows(IllegalStateException.class,
+                () -> new LocalPackageSource("/path/to/nonexistent.tgz"));
     }
 }

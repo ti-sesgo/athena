@@ -1,5 +1,6 @@
 package br.gov.go.saude.athena.config;
 
+import br.gov.go.saude.athena.service.CodeSystemService;
 import br.gov.go.saude.athena.service.PackageLoaderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ import java.util.List;
 public class PackageLoaderConfig {
 
     private final PackageLoaderService packageLoaderService;
+    private final CodeSystemService codeSystemService;
     private final AthenaProperties athenaProperties;
 
     /**
@@ -57,6 +59,7 @@ public class PackageLoaderConfig {
 
         try {
             packageLoaderService.loadPackages(packages);
+            codeSystemService.evictTerminologyCaches();
         } catch (Exception e) {
             log.error("Erro no carregamento automático de packages", e);
         }
