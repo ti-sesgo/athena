@@ -1,6 +1,6 @@
 # Plano de Correção — CodeSystems Fragment
 
-Branch: `fix/codesystem-fragment-loading`. Endereça o item 4.2 de `docs/auditoria-senior.md`.
+Branch: `fix/codesystem-fragment-loading`.
 
 ## Problema
 

@@ -25,7 +25,6 @@ CREATE TABLE terminology.code_systems (
     title VARCHAR(255),
     status VARCHAR(255) NOT NULL,
     content BYTEA NOT NULL,
-    content_mode VARCHAR(32),
     package_id BIGINT NOT NULL REFERENCES terminology.packages(id),
     is_latest BOOLEAN NOT NULL DEFAULT false,
     active BOOLEAN NOT NULL DEFAULT true,
@@ -67,4 +66,3 @@ COMMENT ON COLUMN terminology.code_systems.id IS 'Surrogate key (gerado pelo ban
 COMMENT ON COLUMN terminology.code_systems.resource_id IS 'ID lógico FHIR do recurso (business key)';
 COMMENT ON COLUMN terminology.code_systems.url IS 'URL canônica do CodeSystem';
 COMMENT ON COLUMN terminology.code_systems.status IS 'Status de publicação FHIR';
-COMMENT ON COLUMN terminology.code_systems.content_mode IS 'Valor do campo FHIR CodeSystem.content (CodeSystemContentMode)';
