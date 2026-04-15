@@ -14,7 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.*;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -73,6 +75,18 @@ public class CodeSystemService {
     @Cacheable(value = "codeSystem", key = "'urls'")
     public List<String> findDistinctUrlsByActiveTrue() {
         return codeSystemRepository.findDistinctUrlByActiveTrueOrderByUrl();
+    }
+
+    /**
+     * Invalida os caches de CodeSystem e conceitos. Deve ser chamado ao final da carga
+     * de um package para garantir que respostas subsequentes reflitam os novos dados.
+     */
+    @Caching(evict = {
+            @CacheEvict(value = "codeSystem", allEntries = true),
+            @CacheEvict(value = "concepts", allEntries = true)
+    })
+    public void evictTerminologyCaches() {
+        // Método vazio: o Spring aplica os @CacheEvict antes de executar o corpo.
     }
 
     /**
