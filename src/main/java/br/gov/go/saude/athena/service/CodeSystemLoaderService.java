@@ -12,6 +12,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.CodeSystem;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -97,33 +98,50 @@ public class CodeSystemLoaderService {
     private LoadResult loadCodeSystem(ExtractedResource extracted, PackageEntity pkgEntity) {
         CodeSystem codeSystem = (CodeSystem) extracted.resource();
 
-        String resourceId = codeSystem.getIdElement().getIdPart();
         String url = codeSystem.getUrl();
         String version = codeSystem.getVersion();
 
-        // Verifica se já existe
-        if (codeSystemRepository.findByUrlAndVersionAndActiveTrue(url, version).isPresent()) {
-            return LoadResult.builder()
-                    .url(url)
-                    .version(version)
-                    .status("IGNORADO")
-                    .message("Já existe")
-                    .build();
+        // Fragments (CodeSystem.content=fragment) de um mesmo CodeSystem chegam em artefatos
+        // distintos com a mesma url+version e códigos complementares, sem overlap (spec FHIR R4).
+        // Estratégia: reutilizar a CodeSystemEntity existente e acoplar os conceitos.
+        CodeSystemEntity existing = codeSystemRepository
+                .findByUrlAndVersionAndActiveTrue(url, version)
+                .orElse(null);
+
+        boolean merged = existing != null;
+        CodeSystemEntity csEntity = merged
+                ? existing
+                : persistNewCodeSystem(codeSystem, pkgEntity, extracted, url, version);
+
+        int conceptsLoaded = 0;
+        if (codeSystem.hasConcept()) {
+            loadConcepts(codeSystem, csEntity);
+            conceptsLoaded = codeSystem.getConcept().size();
+            // TODO: loadConcepts é recursivo; size() conta apenas o nível raiz.
         }
 
+        return LoadResult.builder()
+                .url(url)
+                .version(version)
+                .conceptCount(conceptsLoaded)
+                .status(merged ? "ACOPLADO" : "SUCESSO")
+                .build();
+    }
+
+    private CodeSystemEntity persistNewCodeSystem(CodeSystem codeSystem, PackageEntity pkgEntity,
+                                                  ExtractedResource extracted, String url, String version) {
+        String resourceId = codeSystem.getIdElement().getIdPart();
+
         /*
-         * TODO: melhoroar implementação. É uma tarefa difícl identificar a última
-         * versão. Possivelmente pela data de publicação do pacote no package.json
+         * TODO: identificar a versão "mais recente" de forma semântica. Hoje, a primeira versão a
+         * chegar para uma URL recebe isLatest=true.
          */
-        // Determina se é a versão mais recente
         boolean isLatest = codeSystemRepository.findByUrlAndIsLatestTrueAndActiveTrue(url).isEmpty();
 
-        // Usa status de publicação FHIR
         PublicationStatus status = codeSystem.getStatus() != null ? codeSystem.getStatus() : PublicationStatus.NULL;
 
-        // Salva CodeSystem
         CodeSystemEntity csEntity = CodeSystemEntity.builder()
-                .resourceId(resourceId != null ? resourceId : url) // fallback
+                .resourceId(resourceId != null ? resourceId : url)
                 .url(url)
                 .version(version)
                 .name(codeSystem.getName())
@@ -134,24 +152,14 @@ public class CodeSystemLoaderService {
                 .isLatest(isLatest)
                 .build();
 
-        csEntity = codeSystemRepository.save(csEntity);
-
-        // Carrega conceitos
-        int conceptsLoaded = 0;
-        if (codeSystem.hasConcept()) {
-            loadConcepts(codeSystem, csEntity);
-            conceptsLoaded = codeSystem.getConcept().size();
-            // TODO: Note: loadConcepts is recursive, size() only gives top level
-            // Better count would be deep,
-            // Let's stick to getConcept().size() as a rough indicator or improve later.
+        try {
+            return codeSystemRepository.saveAndFlush(csEntity);
+        } catch (DataIntegrityViolationException concurrentInsert) {
+            // Carga paralela: outro fragment acabou de persistir a mesma url+version.
+            // Recupera a entity que venceu a corrida para acoplar os conceitos deste fragment.
+            return codeSystemRepository.findByUrlAndVersionAndActiveTrue(url, version)
+                    .orElseThrow(() -> concurrentInsert);
         }
-
-        return LoadResult.builder()
-                .url(url)
-                .version(version)
-                .conceptCount(conceptsLoaded)
-                .status("SUCESSO")
-                .build();
     }
 
     private static final int BATCH_SIZE = 1000;
@@ -244,11 +252,12 @@ public class CodeSystemLoaderService {
         sb.append(separator);
         int total = results.size();
         long success = results.stream().filter(r -> "SUCESSO".equals(r.status)).count();
+        long merged = results.stream().filter(r -> "ACOPLADO".equals(r.status)).count();
         long ignored = results.stream().filter(r -> "IGNORADO".equals(r.status)).count();
         long errors = results.stream().filter(r -> "ERRO".equals(r.status)).count();
 
-        sb.append(String.format("\n TOTAL: %d  |  SUCESSO: %d  |  IGNORADO: %d  |  ERRO: %d", total, success, ignored,
-                errors));
+        sb.append(String.format("\n TOTAL: %d  |  SUCESSO: %d  |  ACOPLADO: %d  |  IGNORADO: %d  |  ERRO: %d",
+                total, success, merged, ignored, errors));
         sb.append(separator);
 
         log.info(sb.toString());
