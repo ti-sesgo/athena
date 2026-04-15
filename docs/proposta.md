@@ -7,56 +7,50 @@ O objetivo de projeto é ser **simples e rápido**: nada de servidor HAPI comple
 ## Diagrama de contexto (quem fala com quem)
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': {'fontFamily':'-apple-system, Segoe UI, sans-serif', 'fontSize':'13px'}}}%%
 flowchart LR
-    cliente(["<b>Cliente FHIR</b><br/><i>Sistemas clínicos, LIS,<br/>EHR, integradores</i>"])
-    athena["<b>Athena</b><br/><i>Servidor de Terminologias</i>"]
-    registry(["<b>FHIR Registry</b><br/><i>packages.fhir.org</i>"])
+    cliente(["Cliente FHIR<br/>sistemas clínicos, LIS, EHR"])
+    athena["Athena<br/>Servidor de Terminologias"]
+    registry(["FHIR Registry<br/>packages.fhir.org"])
 
-    cliente -- "<b>1.</b> $lookup · $validate-code<br/>JSON/XML · FHIR R4" --> athena
-    athena -- "<b>2.</b> download de packages<br/>HTTPS · GET /&lt;id&gt;/&lt;version&gt;" --> registry
+    cliente -->|"$lookup · $validate-code<br/>FHIR R4 JSON/XML"| athena
+    athena -->|"download de packages<br/>HTTPS"| registry
 
-    classDef external fill:#f2f2f2,stroke:#8a8a8a,stroke-width:1px,color:#333
-    classDef focus   fill:#2e5c8a,stroke:#1a3550,stroke-width:2px,color:#ffffff
+    classDef external fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef system fill:#1e3a8a,stroke:#1e3a8a,color:#f8fafc
     class cliente,registry external
-    class athena focus
-    linkStyle 0,1 stroke:#6b7280,stroke-width:1.5px
+    class athena system
 ```
 
 ## Diagrama de container (o que roda dentro)
 
 ```mermaid
-%%{init: {'theme':'base', 'themeVariables': {'fontFamily':'-apple-system, Segoe UI, sans-serif', 'fontSize':'13px'}}}%%
 flowchart TB
-    cliente(["<b>Cliente FHIR</b>"])
-    registry(["<b>FHIR Registry</b>"])
+    cliente(["Cliente FHIR"])
+    registry(["FHIR Registry"])
 
-    subgraph athena ["Athena (JVM 21 · Spring Boot 3.4)"]
+    subgraph athena ["Athena · Spring Boot 3.4 · JVM 21"]
         direction TB
-        api["<b>API REST</b><br/>Spring MVC · HAPI FHIR<br/>converter FHIR JSON/XML"]
-        loader["<b>Package Loader</b><br/>baixa e extrai<br/>CodeSystem · ValueSet"]
-        cache[("<b>Cache heap</b><br/>Caffeine · TTL 2h")]
-        api -. "consulta cache" .- cache
+        api["API REST<br/>Spring MVC + HAPI FHIR"]
+        loader["Package Loader<br/>extrai CodeSystem e ValueSet"]
+        cache[("Cache Caffeine<br/>TTL 2h")]
+        api -. consulta .-> cache
     end
 
-    db[("<b>PostgreSQL</b><br/>schema <code>terminology</code><br/>packages · code_systems<br/>concepts · value_sets")]
+    db[("PostgreSQL<br/>schema terminology")]
 
-    cliente -- "HTTPS · /fhir/**<br/>$lookup · $validate-code<br/>CodeSystem read · search" --> api
-    api -- "JPA · Hibernate" --> db
-    loader -- "GET package.tgz" --> registry
-    loader -- "batch insert" --> db
+    cliente -->|"HTTPS · /fhir/**"| api
+    api -->|"JPA · Hibernate"| db
+    loader -->|"GET package.tgz"| registry
+    loader -->|"batch insert"| db
 
-    classDef external fill:#f2f2f2,stroke:#8a8a8a,stroke-width:1px,color:#333
-    classDef component fill:#e4ecf7,stroke:#2e5c8a,stroke-width:1.5px,color:#1a3550
-    classDef store     fill:#e6efd4,stroke:#4b7320,stroke-width:1.5px,color:#26400b
-    classDef cacheStore fill:#fff3dc,stroke:#c58a11,stroke-width:1.5px,color:#5a3e05
-
+    classDef external fill:#f1f5f9,stroke:#64748b,color:#0f172a
+    classDef component fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+    classDef store fill:#dcfce7,stroke:#16a34a,color:#14532d
+    classDef cacheStore fill:#fef3c7,stroke:#d97706,color:#78350f
     class cliente,registry external
     class api,loader component
     class db store
     class cache cacheStore
-    linkStyle 1,2,3,4 stroke:#6b7280,stroke-width:1.5px
-    linkStyle 0 stroke:#c58a11,stroke-dasharray:5 3,stroke-width:1.2px
 ```
 
 ## Fluxos principais
@@ -78,7 +72,7 @@ flowchart TB
 
 ## Estado atual e limitações conhecidas
 
-Trabalho em andamento. O README lista as operações implementadas e pendentes; `docs/auditoria-senior.md` enumera dívidas técnicas e riscos priorizados. Duas limitações merecem destaque aqui:
+Trabalho em andamento. O README lista as operações implementadas e pendentes. Duas limitações merecem destaque aqui:
 
 - **Normalização de fragments de CodeSystem.** Múltiplos artefatos com mesma `url+version` e `content=fragment` são consolidados numa única row — `GET /CodeSystem/{id}` pode retornar o recurso incompleto do primeiro fragment, embora `$lookup`/`$validate-code` cubram todos os conceitos. Detalhes em `docs/plano-fragment-fix.md`.
 - **`isLatest` por ordem de chegada.** A primeira versão a ser carregada para uma mesma URL é marcada como default; a lógica semântica (por `package.json.date` ou comparação SemVer) é trabalho futuro.
