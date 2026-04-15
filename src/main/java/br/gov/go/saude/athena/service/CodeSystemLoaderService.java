@@ -11,6 +11,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.hl7.fhir.r4.model.CodeSystem;
+import org.hl7.fhir.r4.model.CodeSystem.CodeSystemContentMode;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -100,18 +101,33 @@ public class CodeSystemLoaderService {
 
         String url = codeSystem.getUrl();
         String version = codeSystem.getVersion();
+        CodeSystemContentMode incomingMode = codeSystem.getContent();
 
         // Fragments (CodeSystem.content=fragment) de um mesmo CodeSystem chegam em artefatos
         // distintos com a mesma url+version e códigos complementares, sem overlap (spec FHIR R4).
-        // Estratégia: reutilizar a CodeSystemEntity existente e acoplar os conceitos.
+        // Estratégia: reutilizar a CodeSystemEntity existente e acoplar os conceitos,
+        // mas APENAS quando ambos os artefatos são fragment. Qualquer outra combinação indica
+        // duplicação real e retorna ERRO explícito.
         CodeSystemEntity existing = codeSystemRepository
                 .findByUrlAndVersionAndActiveTrue(url, version)
                 .orElse(null);
 
+        if (existing != null) {
+            String conflictReason = validateFragmentMerge(existing.getContentMode(), incomingMode);
+            if (conflictReason != null) {
+                return LoadResult.builder()
+                        .url(url)
+                        .version(version)
+                        .status("ERRO")
+                        .message(conflictReason)
+                        .build();
+            }
+        }
+
         boolean merged = existing != null;
         CodeSystemEntity csEntity = merged
                 ? existing
-                : persistNewCodeSystem(codeSystem, pkgEntity, extracted, url, version);
+                : persistNewCodeSystem(codeSystem, pkgEntity, extracted, url, version, incomingMode);
 
         int conceptsLoaded = 0;
         if (codeSystem.hasConcept()) {
@@ -128,8 +144,28 @@ public class CodeSystemLoaderService {
                 .build();
     }
 
+    /**
+     * Valida que a colisão de url+version representa de fato dois fragments complementares.
+     * Retorna null quando o merge é legítimo; caso contrário, a razão do conflito.
+     */
+    private static String validateFragmentMerge(CodeSystemContentMode existingMode,
+                                                CodeSystemContentMode incomingMode) {
+        if (existingMode == CodeSystemContentMode.FRAGMENT
+                && incomingMode == CodeSystemContentMode.FRAGMENT) {
+            return null;
+        }
+        return String.format(
+                "Conflito em url+version: conteúdos incompatíveis para acoplamento (existente=%s, novo=%s). Apenas fragment+fragment é aceitável.",
+                modeLabel(existingMode), modeLabel(incomingMode));
+    }
+
+    private static String modeLabel(CodeSystemContentMode mode) {
+        return mode != null ? mode.toCode() : "null";
+    }
+
     private CodeSystemEntity persistNewCodeSystem(CodeSystem codeSystem, PackageEntity pkgEntity,
-                                                  ExtractedResource extracted, String url, String version) {
+                                                  ExtractedResource extracted, String url, String version,
+                                                  CodeSystemContentMode contentMode) {
         String resourceId = codeSystem.getIdElement().getIdPart();
 
         /*
@@ -147,6 +183,7 @@ public class CodeSystemLoaderService {
                 .name(codeSystem.getName())
                 .title(codeSystem.getTitle())
                 .status(status)
+                .contentMode(contentMode)
                 .content(extracted.content())
                 .packageEntityRef(pkgEntity)
                 .isLatest(isLatest)

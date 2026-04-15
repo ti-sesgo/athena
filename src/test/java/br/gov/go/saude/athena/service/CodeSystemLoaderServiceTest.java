@@ -74,6 +74,7 @@ class CodeSystemLoaderServiceTest {
                 .url(url)
                 .version(version)
                 .status(PublicationStatus.ACTIVE)
+                .contentMode(CodeSystem.CodeSystemContentMode.FRAGMENT)
                 .content("{}".getBytes())
                 .packageEntityRef(pkg)
                 .isLatest(true)
