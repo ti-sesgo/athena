@@ -7,6 +7,7 @@ O objetivo de projeto é ser **simples e rápido**: nada de servidor HAPI comple
 ## Diagrama de contexto (quem fala com quem)
 
 ```mermaid
+%%{init: {'flowchart': {'curve': 'linear'}}}%%
 flowchart LR
     cliente(["Cliente FHIR<br/>sistemas clínicos, LIS, EHR"])
     athena["Athena<br/>Servidor de Terminologias"]
@@ -27,30 +28,25 @@ flowchart LR
 flowchart TB
     cliente(["Cliente FHIR"])
     registry(["FHIR Registry"])
+    db[("PostgreSQL<br/>schema terminology")]
 
     subgraph athena ["Athena · Spring Boot 3.4 · JVM 21"]
         direction TB
         api["API REST<br/>Spring MVC + HAPI FHIR"]
-        loader["Package Loader<br/>extrai CodeSystem e ValueSet"]
+        loader["Package Loader<br/>ResourceExtractor"]
         cache[("Cache Caffeine<br/>TTL 2h")]
-        api -. consulta .-> cache
     end
 
-    db[("PostgreSQL<br/>schema terminology")]
-
     cliente -->|"HTTPS · /fhir/**"| api
-    api -->|"JPA · Hibernate"| db
-    loader -->|"GET package.tgz"| registry
+    api -. consulta .-> cache
+    api -->|"JPA"| db
     loader -->|"batch insert"| db
+    loader -->|"GET package.tgz"| registry
 
     classDef external fill:#f1f5f9,stroke:#64748b,color:#0f172a
-    classDef component fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
-    classDef store fill:#dcfce7,stroke:#16a34a,color:#14532d
-    classDef cacheStore fill:#fef3c7,stroke:#d97706,color:#78350f
-    class cliente,registry external
-    class api,loader component
-    class db store
-    class cache cacheStore
+    classDef system fill:#1e3a8a,stroke:#1e3a8a,color:#f8fafc
+    class cliente,registry,db external
+    class api,loader,cache system
 ```
 
 ## Fluxos principais
