@@ -12,7 +12,6 @@ CREATE TABLE terminology.packages (
     UNIQUE (package_id, version)
 );
 
--- Índices para packages
 CREATE INDEX idx_package_id_version ON terminology.packages(package_id, version, active);
 
 -- Tabela de CodeSystems
@@ -25,13 +24,13 @@ CREATE TABLE terminology.code_systems (
     title VARCHAR(255),
     status VARCHAR(255) NOT NULL,
     content BYTEA NOT NULL,
+    content_mode VARCHAR(32),
     package_id BIGINT NOT NULL REFERENCES terminology.packages(id),
     is_latest BOOLEAN NOT NULL DEFAULT false,
     active BOOLEAN NOT NULL DEFAULT true,
     CONSTRAINT uk_cs_url_version UNIQUE (url, version)
 );
 
--- Índices para CodeSystems
 CREATE INDEX idx_cs_resource_id_active ON terminology.code_systems(resource_id, active);
 CREATE INDEX idx_cs_url_active_version ON terminology.code_systems(url, active, version);
 CREATE INDEX idx_cs_url_active_is_latest ON terminology.code_systems(url, active, is_latest);
@@ -53,16 +52,42 @@ CREATE TABLE terminology.concepts (
     CONSTRAINT uk_concept_code_url_version UNIQUE (code, code_system_url, code_system_version)
 );
 
--- Índices otimizados para operação $lookup
 CREATE INDEX idx_concept_lookup_version ON terminology.concepts(code_system_url, code, active, code_system_version);
 CREATE INDEX idx_concept_lookup_is_latest ON terminology.concepts(code_system_url, code, active, code_system_is_latest);
 
--- Comentários para documentação
+-- Tabela de ValueSets
+-- ValueSet não é fragmentável (spec FHIR R4). Uma linha por (url, version).
+CREATE TABLE terminology.value_sets (
+    id BIGSERIAL PRIMARY KEY,
+    resource_id VARCHAR(255) NOT NULL,
+    url VARCHAR(255) NOT NULL,
+    version VARCHAR(255),
+    name VARCHAR(255),
+    title VARCHAR(255),
+    status VARCHAR(255) NOT NULL,
+    content BYTEA NOT NULL,
+    package_id BIGINT NOT NULL REFERENCES terminology.packages(id),
+    is_latest BOOLEAN NOT NULL DEFAULT false,
+    active BOOLEAN NOT NULL DEFAULT true,
+    CONSTRAINT uk_vs_url_version UNIQUE (url, version)
+);
+
+CREATE INDEX idx_vs_resource_id_active ON terminology.value_sets(resource_id, active);
+CREATE INDEX idx_vs_url_active_version ON terminology.value_sets(url, active, version);
+CREATE INDEX idx_vs_url_active_is_latest ON terminology.value_sets(url, active, is_latest);
+
+-- Comentários
 COMMENT ON TABLE terminology.packages IS 'Packages FHIR carregados no servidor';
 COMMENT ON TABLE terminology.code_systems IS 'CodeSystems extraídos dos packages';
 COMMENT ON TABLE terminology.concepts IS 'Conceitos (códigos) dos CodeSystems';
+COMMENT ON TABLE terminology.value_sets IS 'ValueSets extraídos dos packages FHIR';
 
 COMMENT ON COLUMN terminology.code_systems.id IS 'Surrogate key (gerado pelo banco)';
 COMMENT ON COLUMN terminology.code_systems.resource_id IS 'ID lógico FHIR do recurso (business key)';
 COMMENT ON COLUMN terminology.code_systems.url IS 'URL canônica do CodeSystem';
 COMMENT ON COLUMN terminology.code_systems.status IS 'Status de publicação FHIR';
+COMMENT ON COLUMN terminology.code_systems.content_mode IS 'Valor do campo FHIR CodeSystem.content (CodeSystemContentMode)';
+
+COMMENT ON COLUMN terminology.value_sets.resource_id IS 'ID lógico FHIR do recurso (business key)';
+COMMENT ON COLUMN terminology.value_sets.url IS 'URL canônica do ValueSet';
+COMMENT ON COLUMN terminology.value_sets.content IS 'Conteúdo completo do recurso FHIR em JSON';

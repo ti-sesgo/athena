@@ -8,6 +8,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -20,6 +21,9 @@ import java.util.concurrent.ExecutorService;
 @Slf4j
 public class RegistryPackageSource implements PackageSource {
 
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(30);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofMinutes(5);
+
     private final String packageId;
     private final String version;
     private final String registryUrl;
@@ -30,7 +34,9 @@ public class RegistryPackageSource implements PackageSource {
         this.packageId = packageId;
         this.version = version;
         this.registryUrl = registryUrl;
-        this.httpClient = HttpClient.newHttpClient();
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(CONNECT_TIMEOUT)
+                .build();
 
         // Inicia o carregamento imediatamente
         this.loadingFuture = CompletableFuture.supplyAsync(this::doLoad, executor);
@@ -43,6 +49,7 @@ public class RegistryPackageSource implements PackageSource {
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .timeout(REQUEST_TIMEOUT)
                     .GET()
                     .build();
 

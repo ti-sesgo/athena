@@ -2,6 +2,7 @@ package br.gov.go.saude.athena.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hl7.fhir.r4.model.CodeSystem.CodeSystemContentMode;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
 
 /**
@@ -77,6 +78,13 @@ public class CodeSystemEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PublicationStatus status;
+
+    /**
+     * Modo do conteúdo (FHIR CodeSystem.content).
+     * Necessário para diferenciar merges legítimos de fragments de colisões reais de url+version.
+     */
+    @Enumerated(EnumType.STRING)
+    private CodeSystemContentMode contentMode;
 
     /**
      * Conteúdo completo do recurso FHIR em JSON.

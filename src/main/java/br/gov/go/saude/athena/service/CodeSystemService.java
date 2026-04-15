@@ -14,7 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import ca.uhn.fhir.context.FhirContext;
 import org.hl7.fhir.r4.model.*;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -47,6 +49,26 @@ public class CodeSystemService {
         return findByUrl(url).map(this::parseEntity);
     }
 
+    /**
+     * Busca CodeSystems cujo name começa com o prefixo informado (case-insensitive).
+     * <p>
+     * Implementa o search param FHIR R4 <code>name</code> com modifier default
+     * "starts-with, case-insensitive".
+     * </p>
+     *
+     * @see <a href="https://hl7.org/fhir/R4/codesystem.html#search">CodeSystem search</a>
+     */
+    public List<CodeSystem> searchByName(String namePrefix) {
+        if (!StringUtils.hasText(namePrefix)) {
+            return List.of();
+        }
+        return codeSystemRepository
+                .findByActiveTrueAndIsLatestTrueAndNameStartingWithIgnoreCaseOrderByName(namePrefix)
+                .stream()
+                .map(this::parseEntity)
+                .toList();
+    }
+
     private CodeSystem parseEntity(CodeSystemEntity entity) {
         return fhirContext.newJsonParser().parseResource(CodeSystem.class, new String(entity.getContent()));
     }
@@ -73,6 +95,18 @@ public class CodeSystemService {
     @Cacheable(value = "codeSystem", key = "'urls'")
     public List<String> findDistinctUrlsByActiveTrue() {
         return codeSystemRepository.findDistinctUrlByActiveTrueOrderByUrl();
+    }
+
+    /**
+     * Invalida os caches de CodeSystem e conceitos. Deve ser chamado ao final da carga
+     * de um package para garantir que respostas subsequentes reflitam os novos dados.
+     */
+    @Caching(evict = {
+            @CacheEvict(value = "codeSystem", allEntries = true),
+            @CacheEvict(value = "concepts", allEntries = true)
+    })
+    public void evictTerminologyCaches() {
+        // Método vazio: o Spring aplica os @CacheEvict antes de executar o corpo.
     }
 
     /**
@@ -203,12 +237,24 @@ public class CodeSystemService {
         }
 
         String recommendedDisplay = concept.get().getDisplay();
-        if (StringUtils.hasText(requestDisplay) && !requestDisplay.equals(recommendedDisplay)) {
+        if (StringUtils.hasText(requestDisplay) && !displayMatches(requestDisplay, recommendedDisplay)) {
             return new ValidateCodeResult(false,
                     "The display \"" + requestDisplay + "\" is incorrect.",
                     recommendedDisplay);
         }
         return new ValidateCodeResult(true, null, recommendedDisplay);
+    }
+
+    /**
+     * Comparação leniente de display conforme FHIR R4 (case-insensitive, com trim).
+     *
+     * @see <a href="https://hl7.org/fhir/R4/codesystem-operation-validate-code.html">CodeSystem $validate-code</a>
+     */
+    private static boolean displayMatches(String requestDisplay, String recommendedDisplay) {
+        if (recommendedDisplay == null) {
+            return false;
+        }
+        return requestDisplay.trim().equalsIgnoreCase(recommendedDisplay.trim());
     }
 
     private List<Parameters.ParametersParameterComponent> toParametersParameter(

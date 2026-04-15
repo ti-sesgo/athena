@@ -28,4 +28,6 @@ public interface CodeSystemRepository extends JpaRepository<CodeSystemEntity, Lo
     Optional<CodeSystemEntity> findByUrlAndIsLatestTrueAndActiveTrue(String url);
 
     Optional<CodeSystemEntity> findByResourceIdAndIsLatestTrueAndActiveTrue(String resourceId);
+
+    List<CodeSystemEntity> findByActiveTrueAndIsLatestTrueAndNameStartingWithIgnoreCaseOrderByName(String namePrefix);
 }

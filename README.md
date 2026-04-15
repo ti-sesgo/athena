@@ -48,6 +48,16 @@ curl "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?system=...&c
 
 > Os mesmos formatos podem ser solicitados via header `Accept` (`application/fhir+json` ou `application/fhir+xml`). Quando ambos estão presentes, `_format` tem precedência.
 
+### Normalização de CodeSystems com `content=fragment`
+
+Pela spec FHIR R4 ([CodeSystem.content](https://hl7.org/fhir/R4/codesystem-definitions.html#CodeSystem.content)), a autoridade de um CodeSystem pode distribuí-lo em múltiplos artefatos `fragment`, peças complementares sem overlap de códigos. O Athena consolida todos os fragments de uma mesma `url+version` em **um único registro lógico** (o primeiro artefato vira o registro canônico; os conceitos dos demais são acoplados a ele).
+
+Essa estratégia preserva 100% do comportamento de `$lookup` e `$validate-code`. Tem três limitações conhecidas:
+
+1. `GET /CodeSystem/{id}` retorna o JSON FHIR **apenas do primeiro fragment carregado** — ou seja, pode ser um recurso incompleto frente ao conjunto indexado pelo servidor.
+2. `GET /CodeSystem/{id}` com o `id` lógico de um fragment subsequente responde **404**; apenas o `id` do primeiro fragment fica registrado.
+3. Em recarga, se os fragments chegam em ordem diferente, o artefato retornado por `GET /CodeSystem/{id}` pode ser outro — o conjunto de códigos indexados permanece idêntico; apenas a representação do recurso no banco muda.
+
 | Operação                 | Endpoint                            | Descrição                                                                                                         | Requisito Mínimo | Status              |
 |--------------------------|-------------------------------------|-------------------------------------------------------------------------------------------------------------------|------------------|---------------------|
 | **Expand**               | `GET /ValueSet/{id}/$expand`        | Expande um ValueSet retornando a lista de códigos que atendem aos critérios de filtro                             | ✅ SHALL          | ❌ Não implementado |
@@ -80,7 +90,7 @@ curl "https://terminologias.saude.go.gov.br/fhir/CodeSystem/$lookup?system=...&c
 | **Subsumes**             | `POST /CodeSystem/$subsumes`        | Testa relação de subsunção usando Codings                                                                         | MAY              | ❌ Não implementado |
 | **Read CodeSystem**      | `GET /CodeSystem/{id}`              | Recupera um CodeSystem específico por ID                                                                          | MAY              | ✅ Implementado      |
 | **Search CodeSystem**    | `GET /CodeSystem?url={url}`         | Busca CodeSystem por URL canônica                                                                                 | MAY              | ✅ Implementado      |
-| **Search CodeSystem**    | `GET /CodeSystem?name={name}`       | Busca CodeSystem por nome                                                                                         | MAY              | ❌ Não implementado |
+| **Search CodeSystem**    | `GET /CodeSystem?name={name}`       | Busca CodeSystem por nome (starts-with, case-insensitive)                                                         | MAY              | ✅ Implementado      |
 | **Batch Operations**     | `POST /`                            | Executa múltiplas operações de validação ou tradução em lote                                                      | MAY              | ❌ Não implementado |
 
 ### Conformance Verbs (RFC 2119)

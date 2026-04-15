@@ -30,6 +30,8 @@ public class PackageLoaderService {
 
     private final PackageRepository packageRepository;
     private final CodeSystemLoaderService codeSystemLoaderService;
+    private final ValueSetLoaderService valueSetLoaderService;
+    private final CodeSystemService codeSystemService;
     private final ExecutorService executorService;
     private final AthenaProperties athenaProperties;
 
@@ -58,6 +60,7 @@ public class PackageLoaderService {
 
         // Aguarda todos os packages serem carregados
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+        codeSystemService.evictTerminologyCaches();
         long endTime = System.nanoTime();
         long duration = endTime - startTime;
         log.info("Carregamento de packages concluído em {} s", duration / 1_000_000_000L);
@@ -108,9 +111,17 @@ public class PackageLoaderService {
         try {
             codeSystemLoaderService.loadCodeSystems(packageBytes, pkg);
         } catch (DataIntegrityViolationException e) {
-            // Apenas como fallback extremamente improvável/impossível devido a atomicidade do banco
             log.info(
                     "CodeSystems do package {}:{} já foram/estão sendo carregados por outra instância (DataIntegrityViolationException)",
+                    source.getPackageId(), source.getVersion());
+        }
+
+        // Processa ValueSets de forma concorrente
+        try {
+            valueSetLoaderService.loadValueSets(packageBytes, pkg);
+        } catch (DataIntegrityViolationException e) {
+            log.info(
+                    "ValueSets do package {}:{} já foram/estão sendo carregados por outra instância (DataIntegrityViolationException)",
                     source.getPackageId(), source.getVersion());
         }
 

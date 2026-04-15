@@ -24,6 +24,8 @@ public class LocalPackageSource implements PackageSource {
 
     /**
      * Extrai metadados do package.json dentro do .tgz.
+     * Falha com IllegalStateException quando o arquivo é inacessível ou não contém package.json válido,
+     * evitando que packageId/version nulos se propaguem para a camada de persistência.
      */
     private void extractMetadata() {
         try {
@@ -33,10 +35,16 @@ public class LocalPackageSource implements PackageSource {
             this.packageId = info.name();
             this.version = info.version();
 
+            if (this.packageId == null || this.version == null) {
+                throw new IllegalStateException(
+                        "package.json de " + filePath + " não contém name/version obrigatórios");
+            }
+
             log.debug("Metadados extraídos: {} {}", packageId, version);
 
         } catch (IOException e) {
-            log.warn("Erro ao extrair metadados, usando nome do arquivo: {}", e.getMessage());
+            throw new IllegalStateException(
+                    "Falha ao ler package local: " + filePath + " (" + e.getMessage() + ")", e);
         }
     }
 
